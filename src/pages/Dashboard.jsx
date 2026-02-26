@@ -1,8 +1,8 @@
 import { useApp } from '../context/AppContext'
 import { CATEGORIE, TIPI_VEICOLO } from '../config'
-import { format, isAfter, isBefore, addDays, parseISO } from 'date-fns'
+import { format, isAfter, isBefore, addDays, parseISO, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
-import { AlertTriangle, TrendingDown, Car, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Car, RefreshCw, CalendarClock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 function meseCorrente() {
@@ -135,6 +135,61 @@ export default function Dashboard() {
           })}
         </div>
       )}
+
+      {/* Prossimi appuntamenti per veicolo */}
+      {(() => {
+        const futuri = tagliandi
+          .filter(t => t.dataProssima && !isBefore(parseISO(t.dataProssima), oggi))
+          .sort((a, b) => parseISO(a.dataProssima) - parseISO(b.dataProssima))
+
+        const veicoliConApp = veicoli
+          .map(v => ({ ...v, app: futuri.filter(t => t.veicoloId === v.id) }))
+          .filter(v => v.app.length > 0)
+
+        if (veicoliConApp.length === 0) return null
+
+        return (
+          <div className="bg-slate-800 rounded-2xl p-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <CalendarClock size={16} className="text-slate-400" />
+              <p className="text-sm font-semibold text-slate-300">Prossimi appuntamenti</p>
+            </div>
+            {veicoliConApp.map(v => (
+              <div key={v.id} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{getTipoEmoji(v.tipo)}</span>
+                  <span className="text-sm font-semibold">{v.nome}</span>
+                </div>
+                {v.app.map(t => {
+                  const d = parseISO(t.dataProssima)
+                  const giorni = differenceInDays(d, oggi)
+                  const questoMese = d.getMonth() === oggi.getMonth() && d.getFullYear() === oggi.getFullYear()
+                  const prossimoMese = d.getMonth() === (oggi.getMonth() + 1) % 12
+                  return (
+                    <div key={t.id} className={`flex items-center justify-between rounded-xl px-3 py-2.5 ${
+                      questoMese
+                        ? 'bg-amber-900/30 border border-amber-700/40'
+                        : prossimoMese
+                          ? 'bg-slate-700/80 border border-slate-600/50'
+                          : 'bg-slate-700/50'
+                    }`}>
+                      <p className={`text-sm font-medium ${questoMese ? 'text-amber-200' : 'text-white'}`}>
+                        {t.tipo}
+                      </p>
+                      <div className="text-right">
+                        <p className="text-xs text-slate-300">{t.dataProssima}</p>
+                        <p className={`text-xs font-medium ${questoMese ? 'text-amber-400' : 'text-slate-400'}`}>
+                          {giorni === 0 ? 'oggi' : giorni === 1 ? 'domani' : `tra ${giorni}gg`}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+        )
+      })()}
 
       {/* Spesa per veicolo */}
       {perVeicolo.length > 0 && (
