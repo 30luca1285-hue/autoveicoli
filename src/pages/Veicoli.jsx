@@ -358,10 +358,12 @@ export default function Veicoli() {
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between pt-2">
         <h1 className="text-xl font-bold">Veicoli</h1>
-        <button onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-xl text-sm font-medium">
-          <Plus size={16} /> Aggiungi
-        </button>
+        {!showForm && (
+          <button onClick={() => setShowForm(true)}
+            className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-2 rounded-xl text-sm font-medium">
+            <Plus size={16} /> Aggiungi
+          </button>
+        )}
       </div>
 
       {showForm && <VeicoloForm onSave={handleSave} onCancel={() => setShowForm(false)} />}
