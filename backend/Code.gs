@@ -11,7 +11,7 @@ const SHEET_COSTI      = 'Costi'
 const SHEET_TAGLIANDI  = 'Tagliandi'
 
 // Intestazioni
-const HDR_VEICOLI   = ['id', 'nome', 'targa', 'tipo', 'anno', 'nota', 'createdAt']
+const HDR_VEICOLI   = ['id', 'nome', 'targa', 'tipo', 'anno', 'nota', 'dataImmatricolazione', 'carburante', 'intervaloRevisione', 'kmAttuali', 'createdAt']
 const HDR_COSTI     = ['id', 'veicoloId', 'data', 'categoria', 'importo', 'nota', 'litri', 'km', 'createdAt']
 const HDR_TAGLIANDI = ['id', 'veicoloId', 'tipo', 'data', 'km', 'dataProssima', 'kmProssimi', 'importo', 'nota', 'createdAt']
 
@@ -32,7 +32,15 @@ function sheetToObjects(sheet, headers) {
   if (data.length <= 1) return []
   return data.slice(1).map(row => {
     const obj = {}
-    headers.forEach((h, i) => { obj[h] = row[i] === undefined ? '' : String(row[i]) })
+    headers.forEach((h, i) => {
+      const val = row[i]
+      if (val instanceof Date) {
+        // Formatta solo la data (yyyy-MM-dd) senza ora né fuso orario
+        obj[h] = val.getFullYear() === 1899 ? '' : Utilities.formatDate(val, 'Europe/Rome', 'yyyy-MM-dd')
+      } else {
+        obj[h] = val === undefined ? '' : String(val)
+      }
+    })
     return obj
   }).filter(o => o.id !== '')
 }
@@ -62,7 +70,10 @@ function getVeicoli() {
 function addVeicolo(p) {
   const sheet = getOrCreateSheet(SHEET_VEICOLI, HDR_VEICOLI)
   const id = generateId()
-  sheet.appendRow([id, p.nome||'', p.targa||'', p.tipo||'auto', p.anno||'', p.nota||'', new Date().toISOString()])
+  sheet.appendRow([id, p.nome||'', p.targa||'', p.tipo||'auto', p.anno||'', p.nota||'',
+    p.dataImmatricolazione||'', p.carburante||'', p.intervaloRevisione||'', p.kmAttuali||'',
+    new Date().toISOString()])
+  SpreadsheetApp.flush()
   return { ok: true, id }
 }
 
@@ -71,11 +82,16 @@ function updateVeicolo(p) {
   const data = sheet.getDataRange().getValues()
   for (let i = 1; i < data.length; i++) {
     if (String(data[i][0]) === String(p.id)) {
-      if (p.nome) sheet.getRange(i+1, 2).setValue(p.nome)
-      if (p.targa) sheet.getRange(i+1, 3).setValue(p.targa)
-      if (p.tipo) sheet.getRange(i+1, 4).setValue(p.tipo)
-      if (p.anno) sheet.getRange(i+1, 5).setValue(p.anno)
+      if (p.nome !== undefined) sheet.getRange(i+1, 2).setValue(p.nome)
+      if (p.targa !== undefined) sheet.getRange(i+1, 3).setValue(p.targa)
+      if (p.tipo !== undefined) sheet.getRange(i+1, 4).setValue(p.tipo)
+      if (p.anno !== undefined) sheet.getRange(i+1, 5).setValue(p.anno)
       if (p.nota !== undefined) sheet.getRange(i+1, 6).setValue(p.nota)
+      if (p.dataImmatricolazione !== undefined) sheet.getRange(i+1, 7).setValue(p.dataImmatricolazione)
+      if (p.carburante !== undefined) sheet.getRange(i+1, 8).setValue(p.carburante)
+      if (p.intervaloRevisione !== undefined) sheet.getRange(i+1, 9).setValue(p.intervaloRevisione)
+      if (p.kmAttuali !== undefined) sheet.getRange(i+1, 10).setValue(p.kmAttuali)
+      SpreadsheetApp.flush()
       return { ok: true }
     }
   }
@@ -121,6 +137,7 @@ function addCosto(p) {
     parseFloat(p.km) || '',
     new Date().toISOString()
   ])
+  SpreadsheetApp.flush()
   return { ok: true, id }
 }
 
@@ -150,7 +167,29 @@ function addTagliando(p) {
     p.nota || '',
     new Date().toISOString()
   ])
+  SpreadsheetApp.flush()
   return { ok: true, id }
+}
+
+function updateTagliando(p) {
+  const sheet = getOrCreateSheet(SHEET_TAGLIANDI, HDR_TAGLIANDI)
+  // HDR_TAGLIANDI = ['id','veicoloId','tipo','data','km','dataProssima','kmProssimi','importo','nota','createdAt']
+  //                    0      1          2     3     4       5              6           7        8       9
+  const data = sheet.getDataRange().getValues()
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(p.id)) {
+      if (p.tipo !== undefined)        sheet.getRange(i+1, 3).setValue(p.tipo)
+      if (p.data !== undefined)        sheet.getRange(i+1, 4).setValue(p.data)
+      if (p.km !== undefined)          sheet.getRange(i+1, 5).setValue(parseFloat(p.km) || '')
+      if (p.dataProssima !== undefined) sheet.getRange(i+1, 6).setValue(p.dataProssima)
+      if (p.kmProssimi !== undefined)  sheet.getRange(i+1, 7).setValue(parseFloat(p.kmProssimi) || '')
+      if (p.importo !== undefined)     sheet.getRange(i+1, 8).setValue(parseFloat(p.importo) || '')
+      if (p.nota !== undefined)        sheet.getRange(i+1, 9).setValue(p.nota)
+      SpreadsheetApp.flush()
+      return { ok: true }
+    }
+  }
+  return { ok: false, error: 'not found' }
 }
 
 function deleteTagliando(id) {
@@ -171,6 +210,105 @@ function deleteFromSheet(sheetName, headers, id) {
   return { ok: false, error: 'not found' }
 }
 
+// ── NOTIFICHE EMAIL MENSILI ────────────────────────────────────────────────
+
+function checkScadenzeMensili() {
+  const oggi = new Date()
+  const mese = oggi.getMonth()
+  const anno = oggi.getFullYear()
+
+  const MESI = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre']
+
+  const veicoli = getVeicoli()
+  const tagliandi = getTagliandi()
+
+  const scadute = []
+  const questoMese = []
+
+  tagliandi.forEach(t => {
+    if (!t.dataProssima) return
+    const d = new Date(t.dataProssima)
+    const v = veicoli.find(v => v.id === t.veicoloId)
+    const nome = v ? v.nome + ' (' + v.targa + ')' : 'Veicolo sconosciuto'
+    const item = { nome, tipo: t.tipo, data: t.dataProssima }
+
+    if (d < oggi) {
+      scadute.push(item)
+    } else if (d.getMonth() === mese && d.getFullYear() === anno) {
+      questoMese.push(item)
+    }
+  })
+
+  if (scadute.length === 0 && questoMese.length === 0) return
+
+  const meseTitolo = MESI[mese] + ' ' + anno
+
+  let html = `
+    <div style="font-family:sans-serif;max-width:500px;margin:0 auto">
+      <h2 style="color:#1e40af">🚗 Autoveicoli — Scadenze ${meseTitolo}</h2>`
+
+  if (scadute.length > 0) {
+    html += `<h3 style="color:#dc2626">🔴 Già scadute</h3><ul>`
+    scadute.forEach(s => {
+      html += `<li><strong>${s.nome}</strong> — ${s.tipo} — scadenza: <strong>${s.data}</strong></li>`
+    })
+    html += `</ul>`
+  }
+
+  if (questoMese.length > 0) {
+    html += `<h3 style="color:#d97706">🟡 In scadenza questo mese</h3><ul>`
+    questoMese.forEach(s => {
+      html += `<li><strong>${s.nome}</strong> — ${s.tipo} — scadenza: <strong>${s.data}</strong></li>`
+    })
+    html += `</ul>`
+  }
+
+  html += `<p style="color:#64748b;font-size:12px;margin-top:24px">
+    Apri l'app per i dettagli completi.</p></div>`
+
+  const email = Session.getActiveUser().getEmail()
+  MailApp.sendEmail({
+    to: email,
+    subject: '🚗 Autoveicoli — Scadenze ' + meseTitolo,
+    htmlBody: html
+  })
+}
+
+// Esegui questa funzione UNA SOLA VOLTA dall'editor Apps Script per attivare il trigger
+function setupMonthlyTrigger() {
+  // Rimuove eventuali trigger precedenti per questa funzione
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'checkScadenzeMensili')
+    .forEach(t => ScriptApp.deleteTrigger(t))
+
+  // Crea il trigger: 1° del mese alle 8:00
+  ScriptApp.newTrigger('checkScadenzeMensili')
+    .timeBased()
+    .onMonthDay(1)
+    .atHour(8)
+    .create()
+
+  Logger.log('✅ Trigger attivato: ogni 1° del mese alle 8:00')
+  return { ok: true, message: 'Trigger attivato: ogni 1° del mese alle 8:00' }
+}
+
+// ── Migrazione colonne Veicoli ─────────────────────────────────────────────
+
+function migrateVeicoli() {
+  const sheet = SS.getSheetByName(SHEET_VEICOLI)
+  if (!sheet) return { ok: false, error: 'Sheet non trovato' }
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+  // Se ha già 11 colonne, migrazione già fatta
+  if (headers.length >= 11) return { ok: true, message: 'Già aggiornato' }
+  // Ha 7 colonne: id,nome,targa,tipo,anno,nota,createdAt
+  // Inserisco 4 colonne vuote dopo la col 6 (nota), prima di createdAt
+  sheet.insertColumnsAfter(6, 4)
+  // Aggiorno l'intestazione
+  sheet.getRange(1, 1, 1, 11).setValues([HDR_VEICOLI])
+  return { ok: true, message: 'Migrazione completata: aggiunte 4 colonne' }
+}
+
 // ── Router GET ─────────────────────────────────────────────────────────────
 
 function doGet(e) {
@@ -181,6 +319,8 @@ function doGet(e) {
       case 'getVeicoli':   result = getVeicoli(); break
       case 'getCosti':     result = getCosti(); break
       case 'getTagliandi': result = getTagliandi(); break
+      case 'setupTrigger':  result = setupMonthlyTrigger(); break
+      case 'migrate':       result = migrateVeicoli(); break
       default:             result = { error: 'Unknown action: ' + action }
     }
     return corsResponse(result)
@@ -203,6 +343,7 @@ function doPost(e) {
       case 'addCosto':        result = addCosto(body); break
       case 'deleteCosto':     result = deleteCosto(body.id); break
       case 'addTagliando':    result = addTagliando(body); break
+      case 'updateTagliando': result = updateTagliando(body); break
       case 'deleteTagliando': result = deleteTagliando(body.id); break
       default:                result = { error: 'Unknown action: ' + action }
     }

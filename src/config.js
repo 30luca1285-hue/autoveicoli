@@ -23,7 +23,22 @@ export const TIPI_VEICOLO = [
   { id: 'altro', label: 'Altro', emoji: '🚙', motorizzato: true },
 ]
 
-export const TIPI_TAGLIANDO = [
+export const CARBURANTI = [
+  { id: 'diesel', label: 'Diesel', emoji: '🛢️' },
+  { id: 'benzina', label: 'Benzina', emoji: '⛽' },
+  { id: 'metano', label: 'Metano CNG', emoji: '🔵' },
+  { id: 'gpl', label: 'GPL', emoji: '🟢' },
+  { id: 'elettrico', label: 'Elettrico', emoji: '⚡' },
+  { id: 'ibrido', label: 'Ibrido', emoji: '🔋' },
+]
+
+export const INTERVALLI_REVISIONE = [
+  { mesi: 12, label: 'Ogni anno (commerciali)' },
+  { mesi: 24, label: 'Ogni 2 anni (standard)' },
+  { mesi: 48, label: 'Ogni 4 anni (veicolo nuovo)' },
+]
+
+export const TIPI_INTERVENTO = [
   'Tagliando ordinario',
   'Cambio olio',
   'Cambio filtri',

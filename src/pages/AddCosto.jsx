@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
-import { CATEGORIE, TIPI_VEICOLO, TIPI_TAGLIANDO } from '../config'
+import { CATEGORIE, TIPI_VEICOLO, TIPI_INTERVENTO } from '../config'
 import { format } from 'date-fns'
 import * as api from '../services/api'
 import { CheckCircle, Loader2 } from 'lucide-react'
 
 const SEZIONI = [
   { id: 'costo', label: 'Costo', emoji: '💶' },
-  { id: 'tagliando', label: 'Tagliando / Reminder', emoji: '🔧' },
+  { id: 'tagliando', label: 'Intervento', emoji: '🔧' },
 ]
 
 export default function AddCosto() {
@@ -35,6 +35,30 @@ export default function AddCosto() {
   const [tKmProssimi, setTKmProssimi] = useState('')
   const [tNota, setTNota] = useState('')
   const [tImporto, setTImporto] = useState('')
+
+  // Quando si seleziona un veicolo per il tagliando, auto-calcola dataProssima
+  function handleSelectVeicoloTagliando(id) {
+    setTVeicoloId(id)
+    const v = veicoli.find(v => v.id === id)
+    if (v?.intervaloRevisione && tTipo === 'Revisione periodica') {
+      const d = new Date(tData)
+      d.setMonth(d.getMonth() + Number(v.intervaloRevisione))
+      setTDataProssima(format(d, 'yyyy-MM-dd'))
+    }
+  }
+
+  // Quando si cambia tipo o data, ricalcola se revisione periodica
+  function handleTipoTagliando(tipo) {
+    setTTipo(tipo)
+    if (tipo === 'Revisione periodica' && tVeicoloId) {
+      const v = veicoli.find(v => v.id === tVeicoloId)
+      if (v?.intervaloRevisione) {
+        const d = new Date(tData)
+        d.setMonth(d.getMonth() + Number(v.intervaloRevisione))
+        setTDataProssima(format(d, 'yyyy-MM-dd'))
+      }
+    }
+  }
 
   const veicoloSelezionato = veicoli.find(v => v.id === veicoloId)
   const isMotorizzato = TIPI_VEICOLO.find(t => t.id === veicoloSelezionato?.tipo)?.motorizzato ?? true
@@ -271,7 +295,7 @@ export default function AddCosto() {
                   <button
                     key={v.id}
                     type="button"
-                    onClick={() => setTVeicoloId(v.id)}
+                    onClick={() => handleSelectVeicoloTagliando(v.id)}
                     className={`p-3 rounded-xl border text-left transition-colors ${
                       tVeicoloId === v.id
                         ? 'border-blue-500 bg-blue-900/30 text-white'
@@ -292,11 +316,11 @@ export default function AddCosto() {
             <label className="text-xs text-slate-400 font-medium mb-1 block">Tipo intervento *</label>
             <select
               value={tTipo}
-              onChange={e => setTTipo(e.target.value)}
+              onChange={e => handleTipoTagliando(e.target.value)}
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm"
             >
               <option value="">Seleziona...</option>
-              {TIPI_TAGLIANDO.map(t => (
+              {TIPI_INTERVENTO.map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
@@ -380,7 +404,7 @@ export default function AddCosto() {
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2"
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : null}
-            {saving ? 'Salvataggio...' : 'Salva Tagliando'}
+            {saving ? 'Salvataggio...' : 'Salva Intervento'}
           </button>
         </form>
       )}
