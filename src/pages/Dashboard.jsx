@@ -145,6 +145,7 @@ export default function Dashboard() {
         const veicoliConApp = veicoli
           .map(v => ({ ...v, app: futuri.filter(t => t.veicoloId === v.id) }))
           .filter(v => v.app.length > 0)
+          .sort((a, b) => parseISO(a.app[0].dataProssima) - parseISO(b.app[0].dataProssima))
 
         if (veicoliConApp.length === 0) return null
 
