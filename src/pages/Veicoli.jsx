@@ -20,9 +20,11 @@ function VeicoloForm({ onSave, onCancel }) {
 
   const isMotorizzato = TIPI_VEICOLO.find(t => t.id === tipo)?.motorizzato ?? true
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    if (!nome) return
+  async function handleSubmit() {
+    if (!nome) {
+      setError('Inserisci il nome del veicolo')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
@@ -37,11 +39,17 @@ function VeicoloForm({ onSave, onCancel }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-slate-800 rounded-2xl p-4 space-y-4">
+    <div className="bg-slate-800 rounded-2xl p-4 space-y-4">
       <div className="flex items-center justify-between">
         <p className="font-semibold">Nuovo veicolo</p>
         <button type="button" onClick={onCancel} className="text-slate-400"><X size={20} /></button>
       </div>
+
+      {error && (
+        <div className="bg-red-900/40 border border-red-700 rounded-xl p-3 text-red-300 text-sm">
+          {error}
+        </div>
+      )}
 
       <div>
         <label className="text-xs text-slate-400 mb-1 block">Nome *</label>
@@ -128,18 +136,12 @@ function VeicoloForm({ onSave, onCancel }) {
           className="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2.5 text-white text-sm" />
       </div>
 
-      {error && (
-        <div className="bg-red-900/40 border border-red-700 rounded-xl p-3 text-red-300 text-sm">
-          {error}
-        </div>
-      )}
-
-      <button type="submit" disabled={saving || !nome}
+      <button type="button" onClick={handleSubmit} disabled={saving}
         className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2">
         {saving ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
         {saving ? 'Salvataggio...' : 'Aggiungi Veicolo'}
       </button>
-    </form>
+    </div>
   )
 }
 
@@ -300,12 +302,11 @@ export default function Veicoli() {
   const [editingTagliandoId, setEditingTagliandoId] = useState(null)
   const [deletingTagliandoId, setDeletingTagliandoId] = useState(null)
 
-  async function handleSave(newVeicolo) {
+  function handleSave(newVeicolo) {
     if (newVeicolo) {
       setVeicoli(prev => [...prev, newVeicolo])
     }
     setShowForm(false)
-    refreshVeicoli() // sync in background
   }
 
   async function handleUpdate() {
