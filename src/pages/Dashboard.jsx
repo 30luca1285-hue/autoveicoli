@@ -117,6 +117,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm font-semibold text-red-300">{t.tipo} — SCADUTO</p>
                   <p className="text-xs text-slate-400">{v?.nome} · {t.dataProssima}</p>
+                  {t.nota && <p className="text-xs text-slate-500 italic mt-0.5">{t.nota}</p>}
                 </div>
               </div>
             )
@@ -129,6 +130,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm font-semibold text-amber-300">{t.tipo}</p>
                   <p className="text-xs text-slate-400">{v?.nome} · {t.dataProssima}</p>
+                  {t.nota && <p className="text-xs text-slate-500 italic mt-0.5">{t.nota}</p>}
                 </div>
               </div>
             )
@@ -174,10 +176,13 @@ export default function Dashboard() {
                           ? 'bg-slate-700/80 border border-slate-600/50'
                           : 'bg-slate-700/50'
                     }`}>
-                      <p className={`text-sm font-medium ${questoMese ? 'text-amber-200' : 'text-white'}`}>
-                        {t.tipo}
-                      </p>
-                      <div className="text-right">
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm font-medium ${questoMese ? 'text-amber-200' : 'text-white'}`}>
+                          {t.tipo}
+                        </p>
+                        {t.nota && <p className="text-xs text-slate-400 italic truncate">{t.nota}</p>}
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
                         <p className="text-xs text-slate-300">{t.dataProssima}</p>
                         <p className={`text-xs font-medium ${questoMese ? 'text-amber-400' : 'text-slate-400'}`}>
                           {giorni === 0 ? 'oggi' : giorni === 1 ? 'domani' : `tra ${giorni}gg`}

@@ -11,8 +11,8 @@ const CATEGORIE_CON_REMINDER = ['manutenzione', 'assicurazione', 'bollo', 'revis
 // Tipo intervento suggerito in base alla categoria
 const CATEGORIA_TIPO_MAP = {
   manutenzione: 'Tagliando ordinario',
-  assicurazione: 'Altro',
-  bollo: 'Altro',
+  assicurazione: 'Assicurazione',
+  bollo: 'Bollo',
   revisione: 'Revisione periodica',
   pneumatici: 'Cambio pneumatici',
 }

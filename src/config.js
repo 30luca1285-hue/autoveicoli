@@ -42,5 +42,7 @@ export const TIPI_INTERVENTO = [
   'Revisione freni',
   'Distribuzione',
   'Revisione periodica',
+  'Assicurazione',
+  'Bollo',
   'Altro',
 ]

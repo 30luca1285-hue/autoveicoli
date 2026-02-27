@@ -526,6 +526,9 @@ export default function Veicoli() {
                                   {t.kmProssimi && (
                                     <p className="text-xs text-slate-500">KM: {Number(t.kmProssimi).toLocaleString('it-IT')}</p>
                                   )}
+                                  {t.nota && (
+                                    <p className="text-xs text-slate-400 mt-0.5 italic">{t.nota}</p>
+                                  )}
                                 </div>
                               )
                             })}

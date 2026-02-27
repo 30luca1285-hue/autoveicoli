@@ -4,11 +4,19 @@ import { APPS_SCRIPT_URL } from '../config'
 
 const AppContext = createContext(null)
 
+function fromCache(key) {
+  try { return JSON.parse(localStorage.getItem(key)) || [] } catch { return [] }
+}
+function toCache(key, data) {
+  try { localStorage.setItem(key, JSON.stringify(data)) } catch {}
+}
+
 export function AppProvider({ children }) {
-  const [veicoli, setVeicoli] = useState([])
-  const [costi, setCosti] = useState([])
-  const [tagliandi, setTagliandi] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [veicoli, setVeicoli] = useState(() => fromCache('cache_veicoli'))
+  const [costi, setCosti] = useState(() => fromCache('cache_costi'))
+  const [tagliandi, setTagliandi] = useState(() => fromCache('cache_tagliandi'))
+  // Mostra spinner solo se non c'è nulla in cache
+  const [loading, setLoading] = useState(!localStorage.getItem('cache_veicoli'))
   const [error, setError] = useState(null)
   const [configured, setConfigured] = useState(
     APPS_SCRIPT_URL !== 'INSERISCI_QUI_URL_APPS_SCRIPT' || !!localStorage.getItem('appsScriptUrl')
@@ -19,6 +27,7 @@ export function AppProvider({ children }) {
     try {
       const data = await api.getVeicoli()
       setVeicoli(data)
+      toCache('cache_veicoli', data)
     } catch (e) {
       setError('Errore caricamento veicoli')
     }
@@ -29,6 +38,7 @@ export function AppProvider({ children }) {
     try {
       const data = await api.getCosti()
       setCosti(data)
+      toCache('cache_costi', data)
     } catch (e) {
       setError('Errore caricamento costi')
     }
@@ -39,6 +49,7 @@ export function AppProvider({ children }) {
     try {
       const data = await api.getTagliandi()
       setTagliandi(data)
+      toCache('cache_tagliandi', data)
     } catch (e) {
       setError('Errore caricamento tagliandi')
     }
@@ -46,7 +57,8 @@ export function AppProvider({ children }) {
 
   const loadAll = useCallback(async () => {
     if (!configured) return
-    setLoading(true)
+    const hasCache = !!localStorage.getItem('cache_veicoli')
+    if (!hasCache) setLoading(true)
     setError(null)
     await Promise.all([loadVeicoli(), loadCosti(), loadTagliandi()])
     setLoading(false)
