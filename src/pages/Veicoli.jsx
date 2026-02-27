@@ -1,6 +1,21 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
-import { TIPI_VEICOLO, CARBURANTI, INTERVALLI_REVISIONE, CATEGORIE } from '../config'
+import { TIPI_VEICOLO, CARBURANTI, INTERVALLI_REVISIONE, CATEGORIE, TIPI_INTERVENTO } from '../config'
+
+function fmtDate(s) {
+  if (!s) return '—'
+  const parts = s.split('-')
+  return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : s
+}
+
+const CATEGORIA_TIPO_MAP = {
+  manutenzione: 'Tagliando ordinario',
+  assicurazione: 'Assicurazione',
+  bollo: 'Bollo',
+  revisione: 'Revisione periodica',
+  pneumatici: 'Cambio pneumatici',
+  altro: 'Altro',
+}
 import * as api from '../services/api'
 import { addDays, parseISO, isBefore, isAfter } from 'date-fns'
 import { Plus, Trash2, Loader2, X, ChevronDown, Save, Pencil, Bell, Wrench } from 'lucide-react'
@@ -243,6 +258,7 @@ function VeicoloEdit({ veicolo, onSave, onCancel }) {
 }
 
 function TagliandoEditRow({ t, onSave, onCancel }) {
+  const [tipo, setTipo] = useState(t.tipo || '')
   const [data, setData] = useState(t.data || '')
   const [km, setKm] = useState(t.km || '')
   const [dataProssima, setDataProssima] = useState(t.dataProssima || '')
@@ -254,7 +270,7 @@ function TagliandoEditRow({ t, onSave, onCancel }) {
   async function handleSave() {
     setSaving(true)
     try {
-      await api.updateTagliando({ id: t.id, data, km, dataProssima, kmProssimi, importo, nota })
+      await api.updateTagliando({ id: t.id, tipo, data, km, dataProssima, kmProssimi, importo, nota })
       onSave()
     } finally {
       setSaving(false)
@@ -263,7 +279,13 @@ function TagliandoEditRow({ t, onSave, onCancel }) {
 
   return (
     <div className="bg-slate-700 rounded-xl p-3 space-y-2">
-      <p className="text-xs font-semibold text-slate-300">{t.tipo}</p>
+      <div>
+        <label className="text-xs text-slate-400 mb-0.5 block">Tipo</label>
+        <select value={tipo} onChange={e => setTipo(e.target.value)}
+          className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs">
+          {TIPI_INTERVENTO.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-xs text-slate-400 mb-0.5 block">Data effettuato</label>
@@ -315,19 +337,29 @@ function TagliandoEditRow({ t, onSave, onCancel }) {
   )
 }
 
-function CostoEditRow({ c, onSave, onCancel }) {
+function CostoEditRow({ c, tagliando, onSave, onCancel }) {
+  const [categoria, setCategoria] = useState(c.categoria || '')
   const [data, setData] = useState(c.data || '')
   const [km, setKm] = useState(c.km || '')
   const [importo, setImporto] = useState(c.importo || '')
   const [nota, setNota] = useState(c.nota || '')
+  const [dataProssima, setDataProssima] = useState(tagliando?.dataProssima || '')
+  const [kmProssimi, setKmProssimi] = useState(tagliando?.kmProssimi || '')
   const [saving, setSaving] = useState(false)
-
-  const catObj = CATEGORIE.find(cat => cat.id === c.categoria)
 
   async function handleSave() {
     setSaving(true)
     try {
-      await api.updateCosto({ id: c.id, data, km, importo, nota })
+      await api.updateCosto({ id: c.id, categoria, data, km, importo, nota })
+      if (tagliando) {
+        await api.updateTagliando({ id: tagliando.id, dataProssima, kmProssimi })
+      } else if (dataProssima || kmProssimi) {
+        await api.addTagliando({
+          veicoloId: c.veicoloId,
+          tipo: CATEGORIA_TIPO_MAP[categoria] || 'Altro',
+          data, km, dataProssima, kmProssimi, nota, importo,
+        })
+      }
       onSave()
     } finally {
       setSaving(false)
@@ -336,7 +368,19 @@ function CostoEditRow({ c, onSave, onCancel }) {
 
   return (
     <div className="bg-slate-700 rounded-xl p-3 space-y-2">
-      <p className="text-xs font-semibold text-slate-300">{catObj?.emoji} {catObj?.label || c.categoria}</p>
+      <div>
+        <label className="text-xs text-slate-400 mb-0.5 block">Categoria</label>
+        <div className="grid grid-cols-3 gap-1">
+          {CATEGORIE.map(cat => (
+            <button key={cat.id} type="button" onClick={() => setCategoria(cat.id)}
+              className={`py-1 px-1 rounded-lg border text-xs text-center transition-colors ${
+                categoria === cat.id ? 'border-blue-500 bg-blue-900/30 text-white' : 'border-slate-600 bg-slate-600 text-slate-300'
+              }`}>
+              {cat.emoji} {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-xs text-slate-400 mb-0.5 block">Data</label>
@@ -359,6 +403,21 @@ function CostoEditRow({ c, onSave, onCancel }) {
           <label className="text-xs text-slate-400 mb-0.5 block">Nota</label>
           <input type="text" placeholder="..." value={nota} onChange={e => setNota(e.target.value)}
             className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+        </div>
+      </div>
+      <div className="border-t border-slate-600 pt-2 space-y-2">
+        <p className="text-xs text-slate-400 flex items-center gap-1"><Bell size={10} /> Reminder</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs text-slate-400 mb-0.5 block">Prossima data</label>
+            <input type="date" value={dataProssima} onChange={e => setDataProssima(e.target.value)}
+              className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+          </div>
+          <div>
+            <label className="text-xs text-slate-400 mb-0.5 block">KM prossimi</label>
+            <input type="number" placeholder="—" value={kmProssimi} onChange={e => setKmProssimi(e.target.value)}
+              className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+          </div>
         </div>
       </div>
       <div className="flex gap-2">
@@ -413,7 +472,7 @@ export default function Veicoli() {
   }
 
   async function handleUpdateCosto() {
-    await refreshCosti()
+    await Promise.all([refreshCosti(), refreshTagliandi()])
     setEditingCostoId(null)
   }
 
@@ -510,7 +569,7 @@ export default function Veicoli() {
                         {v.dataImmatricolazione && (
                           <div className="flex justify-between">
                             <span className="text-slate-400">Immatricolazione</span>
-                            <span>{v.dataImmatricolazione}</span>
+                            <span>{fmtDate(v.dataImmatricolazione)}</span>
                           </div>
                         )}
                         {v.kmAttuali && (
@@ -556,8 +615,12 @@ export default function Veicoli() {
                             </p>
                             {shown.map(c => {
                               if (editingCostoId === c.id) {
+                                const matchingTagliando = tagliandi.find(t =>
+                                  String(t.veicoloId) === String(c.veicoloId) && t.data === c.data
+                                )
                                 return (
                                   <CostoEditRow key={c.id} c={c}
+                                    tagliando={matchingTagliando}
                                     onSave={handleUpdateCosto}
                                     onCancel={() => setEditingCostoId(null)} />
                                 )
@@ -569,7 +632,7 @@ export default function Veicoli() {
                                     <p className="text-xs font-semibold text-white">
                                       {catObj?.emoji} {catObj?.label || c.categoria}
                                     </p>
-                                    {c.data && <p className="text-xs text-slate-400 mt-0.5">{c.data}</p>}
+                                    {c.data && <p className="text-xs text-slate-400 mt-0.5">{fmtDate(c.data)}</p>}
                                     {c.km && <p className="text-xs text-slate-500">KM: {Number(c.km).toLocaleString('it-IT')}</p>}
                                     <p className="text-xs text-slate-400 font-medium mt-0.5">€ {c.importo ? Number(c.importo).toFixed(2) : '—'}</p>
                                     {c.nota && <p className="text-xs text-slate-500 italic">{c.nota}</p>}
@@ -638,7 +701,7 @@ export default function Veicoli() {
                                       {t.tipo}
                                       {status === 'scaduto' && ' — SCADUTO'}
                                     </p>
-                                    <p className="text-xs text-slate-400 mt-0.5">Prossima: {t.dataProssima}</p>
+                                    <p className="text-xs text-slate-400 mt-0.5">Prossima: {fmtDate(t.dataProssima)}</p>
                                     {t.kmProssimi && (
                                       <p className="text-xs text-slate-500">KM: {Number(t.kmProssimi).toLocaleString('it-IT')}</p>
                                     )}

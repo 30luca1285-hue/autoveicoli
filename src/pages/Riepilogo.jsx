@@ -9,6 +9,12 @@ import {
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899', '#84cc16', '#a78bfa']
 
+function fmtDate(s) {
+  if (!s) return '—'
+  const parts = s.split('-')
+  return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : s
+}
+
 const ANNI = (() => {
   const y = new Date().getFullYear()
   return [y - 1, y, y + 1]
@@ -33,7 +39,7 @@ export default function Riepilogo() {
       const d = parseISO(c.data)
       const okAnno = d.getFullYear() === anno
       const okMese = mese === 0 || d.getMonth() + 1 === mese
-      const okVeicolo = veicoloId === 'tutti' || c.veicoloId === veicoloId
+      const okVeicolo = veicoloId === 'tutti' || String(c.veicoloId) === String(veicoloId)
       return okAnno && okMese && okVeicolo
     })
   }, [costi, anno, mese, veicoloId])
@@ -60,7 +66,7 @@ export default function Riepilogo() {
       name: v.nome,
       totale: Number(
         costiFiltrati
-          .filter(c => c.veicoloId === v.id)
+          .filter(c => String(c.veicoloId) === String(v.id))
           .reduce((s, c) => s + Number(c.importo), 0)
           .toFixed(2)
       )
@@ -200,8 +206,6 @@ export default function Riepilogo() {
                 outerRadius={80}
                 paddingAngle={3}
                 dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                labelLine={false}
               >
                 {perCategoria.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -239,7 +243,7 @@ export default function Riepilogo() {
                   <span className="text-lg">{cat?.emoji || '📦'}</span>
                   <div>
                     <p className="text-sm">{getNomeVeicolo(c.veicoloId)}</p>
-                    <p className="text-xs text-slate-400">{c.nota || cat?.label} · {c.data}</p>
+                    <p className="text-xs text-slate-400">{c.nota || cat?.label} · {fmtDate(c.data)}</p>
                   </div>
                 </div>
                 <span className="font-semibold text-sm">€ {Number(c.importo).toFixed(2)}</span>
