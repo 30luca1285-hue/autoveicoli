@@ -243,6 +243,8 @@ function VeicoloEdit({ veicolo, onSave, onCancel }) {
 }
 
 function TagliandoEditRow({ t, onSave, onCancel }) {
+  const [data, setData] = useState(t.data || '')
+  const [km, setKm] = useState(t.km || '')
   const [dataProssima, setDataProssima] = useState(t.dataProssima || '')
   const [kmProssimi, setKmProssimi] = useState(t.kmProssimi || '')
   const [importo, setImporto] = useState(t.importo || '')
@@ -252,7 +254,7 @@ function TagliandoEditRow({ t, onSave, onCancel }) {
   async function handleSave() {
     setSaving(true)
     try {
-      await api.updateTagliando({ id: t.id, dataProssima, kmProssimi, importo, nota })
+      await api.updateTagliando({ id: t.id, data, km, dataProssima, kmProssimi, importo, nota })
       onSave()
     } finally {
       setSaving(false)
@@ -262,6 +264,18 @@ function TagliandoEditRow({ t, onSave, onCancel }) {
   return (
     <div className="bg-slate-700 rounded-xl p-3 space-y-2">
       <p className="text-xs font-semibold text-slate-300">{t.tipo}</p>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs text-slate-400 mb-0.5 block">Data effettuato</label>
+          <input type="date" value={data} onChange={e => setData(e.target.value)}
+            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 mb-0.5 block">KM attuali</label>
+          <input type="number" placeholder="—" value={km} onChange={e => setKm(e.target.value)}
+            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="text-xs text-slate-400 mb-0.5 block">Prossima data</label>
@@ -359,7 +373,7 @@ export default function Veicoli() {
   }
 
   function getTotale(vId) {
-    return costi.filter(c => c.veicoloId === vId).reduce((s, c) => s + Number(c.importo), 0)
+    return costi.filter(c => String(c.veicoloId) === String(vId)).reduce((s, c) => s + Number(c.importo), 0)
   }
 
   return (
@@ -446,7 +460,7 @@ export default function Veicoli() {
 
                       {/* Sezione Interventi */}
                       {(() => {
-                        const vInterventi = tagliandi.filter(t => t.veicoloId === v.id)
+                        const vInterventi = tagliandi.filter(t => String(t.veicoloId) === String(v.id))
                         if (vInterventi.length === 0) return null
                         return (
                           <div className="space-y-2">
@@ -497,7 +511,7 @@ export default function Veicoli() {
 
                       {/* Sezione Reminder */}
                       {(() => {
-                        const vReminder = tagliandi.filter(t => t.veicoloId === v.id && t.dataProssima)
+                        const vReminder = tagliandi.filter(t => String(t.veicoloId) === String(v.id) && t.dataProssima)
                         if (vReminder.length === 0) return null
                         return (
                           <div className="space-y-2">
@@ -537,10 +551,17 @@ export default function Veicoli() {
                                       <p className="text-xs text-slate-400 mt-0.5 italic">{t.nota}</p>
                                     )}
                                   </div>
-                                  <button onClick={() => setEditingTagliandoId(t.id)}
-                                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-600/50 shrink-0">
-                                    <Pencil size={13} />
-                                  </button>
+                                  <div className="flex gap-1 shrink-0">
+                                    <button onClick={() => setEditingTagliandoId(t.id)}
+                                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-600/50">
+                                      <Pencil size={13} />
+                                    </button>
+                                    <button onClick={() => handleDeleteTagliando(t.id)}
+                                      disabled={deletingTagliandoId === t.id}
+                                      className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-900/30 disabled:opacity-50">
+                                      {deletingTagliandoId === t.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                                    </button>
+                                  </div>
                                 </div>
                               )
                             })}
@@ -548,15 +569,18 @@ export default function Veicoli() {
                         )
                       })()}
 
-                      <div className="flex gap-2">
+                      <div className="space-y-2">
                         <button onClick={() => setEditingId(v.id)}
-                          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-600 text-slate-300 text-sm hover:text-white">
+                          className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-600 text-slate-300 text-sm hover:text-white">
                           <Pencil size={14} /> Modifica
                         </button>
-                        <button onClick={() => handleDelete(v.id)} disabled={deleting === v.id}
-                          className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-red-400 hover:text-red-300 text-sm disabled:opacity-50">
-                          {deleting === v.id ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
-                        </button>
+                        <div className="flex justify-center">
+                          <button onClick={() => handleDelete(v.id)} disabled={deleting === v.id}
+                            className="flex items-center gap-1 text-xs text-slate-600 hover:text-red-400 disabled:opacity-50 transition-colors py-1">
+                            {deleting === v.id ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                            Elimina veicolo
+                          </button>
+                        </div>
                       </div>
                     </>
                   ) : (
