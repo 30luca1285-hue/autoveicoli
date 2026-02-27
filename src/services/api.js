@@ -42,6 +42,9 @@ export async function getCosti() {
 export async function addCosto(data) {
   return post({ action: 'addCosto', ...data })
 }
+export async function updateCosto(data) {
+  return post({ action: 'updateCosto', ...data })
+}
 export async function deleteCosto(id) {
   return post({ action: 'deleteCosto', id })
 }

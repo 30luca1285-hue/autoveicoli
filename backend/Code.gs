@@ -141,6 +141,25 @@ function addCosto(p) {
   return { ok: true, id }
 }
 
+function updateCosto(p) {
+  const sheet = getOrCreateSheet(SHEET_COSTI, HDR_COSTI)
+  // HDR_COSTI = ['id','veicoloId','data','categoria','importo','nota','litri','km','createdAt']
+  //                0       1        2        3           4        5      6      7       8
+  const data = sheet.getDataRange().getValues()
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(p.id)) {
+      if (p.data !== undefined)      sheet.getRange(i+1, 3).setValue(p.data)
+      if (p.categoria !== undefined) sheet.getRange(i+1, 4).setValue(p.categoria)
+      if (p.importo !== undefined)   sheet.getRange(i+1, 5).setValue(parseFloat(p.importo) || '')
+      if (p.nota !== undefined)      sheet.getRange(i+1, 6).setValue(p.nota)
+      if (p.km !== undefined)        sheet.getRange(i+1, 8).setValue(parseFloat(p.km) || '')
+      SpreadsheetApp.flush()
+      return { ok: true }
+    }
+  }
+  return { ok: false, error: 'not found' }
+}
+
 function deleteCosto(id) {
   return deleteFromSheet(SHEET_COSTI, HDR_COSTI, id)
 }
@@ -341,6 +360,7 @@ function doPost(e) {
       case 'updateVeicolo':   result = updateVeicolo(body); break
       case 'deleteVeicolo':   result = deleteVeicolo(body.id); break
       case 'addCosto':        result = addCosto(body); break
+      case 'updateCosto':     result = updateCosto(body); break
       case 'deleteCosto':     result = deleteCosto(body.id); break
       case 'addTagliando':    result = addTagliando(body); break
       case 'updateTagliando': result = updateTagliando(body); break

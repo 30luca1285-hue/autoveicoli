@@ -315,6 +315,67 @@ function TagliandoEditRow({ t, onSave, onCancel }) {
   )
 }
 
+function CostoEditRow({ c, onSave, onCancel }) {
+  const [data, setData] = useState(c.data || '')
+  const [km, setKm] = useState(c.km || '')
+  const [importo, setImporto] = useState(c.importo || '')
+  const [nota, setNota] = useState(c.nota || '')
+  const [saving, setSaving] = useState(false)
+
+  const catObj = CATEGORIE.find(cat => cat.id === c.categoria)
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await api.updateCosto({ id: c.id, data, km, importo, nota })
+      onSave()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-slate-700 rounded-xl p-3 space-y-2">
+      <p className="text-xs font-semibold text-slate-300">{catObj?.emoji} {catObj?.label || c.categoria}</p>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs text-slate-400 mb-0.5 block">Data</label>
+          <input type="date" value={data} onChange={e => setData(e.target.value)}
+            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 mb-0.5 block">KM</label>
+          <input type="number" placeholder="—" value={km} onChange={e => setKm(e.target.value)}
+            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs text-slate-400 mb-0.5 block">Importo €</label>
+          <input type="number" step="0.01" placeholder="0.00" value={importo} onChange={e => setImporto(e.target.value)}
+            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 mb-0.5 block">Nota</label>
+          <input type="text" placeholder="..." value={nota} onChange={e => setNota(e.target.value)}
+            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button type="button" onClick={onCancel}
+          className="flex-1 py-1.5 rounded-lg border border-slate-500 text-slate-300 text-xs">
+          Annulla
+        </button>
+        <button type="button" onClick={handleSave} disabled={saving}
+          className="flex-1 bg-blue-600 text-white py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 disabled:opacity-50">
+          {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+          {saving ? 'Salvo...' : 'Salva'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Veicoli() {
   const { veicoli, setVeicoli, costi, tagliandi, refreshVeicoli, refreshCosti, refreshTagliandi } = useApp()
   const [showForm, setShowForm] = useState(false)
@@ -323,6 +384,7 @@ export default function Veicoli() {
   const [deleting, setDeleting] = useState(null)
   const [editingTagliandoId, setEditingTagliandoId] = useState(null)
   const [deletingTagliandoId, setDeletingTagliandoId] = useState(null)
+  const [editingCostoId, setEditingCostoId] = useState(null)
   const [deletingCostoId, setDeletingCostoId] = useState(null)
   const [expandedInterventi, setExpandedInterventi] = useState({})
   const [expandedReminder, setExpandedReminder] = useState({})
@@ -348,6 +410,11 @@ export default function Veicoli() {
     } finally {
       setDeleting(null)
     }
+  }
+
+  async function handleUpdateCosto() {
+    await refreshCosti()
+    setEditingCostoId(null)
   }
 
   async function handleDeleteCosto(id) {
@@ -488,6 +555,13 @@ export default function Veicoli() {
                               <Wrench size={11} /> Interventi ({vCosti.length})
                             </p>
                             {shown.map(c => {
+                              if (editingCostoId === c.id) {
+                                return (
+                                  <CostoEditRow key={c.id} c={c}
+                                    onSave={handleUpdateCosto}
+                                    onCancel={() => setEditingCostoId(null)} />
+                                )
+                              }
                               const catObj = CATEGORIE.find(cat => cat.id === c.categoria)
                               return (
                                 <div key={c.id} className="rounded-xl p-2.5 flex items-start justify-between gap-2 bg-slate-700">
@@ -500,11 +574,17 @@ export default function Veicoli() {
                                     <p className="text-xs text-slate-400 font-medium mt-0.5">€ {c.importo ? Number(c.importo).toFixed(2) : '—'}</p>
                                     {c.nota && <p className="text-xs text-slate-500 italic">{c.nota}</p>}
                                   </div>
-                                  <button onClick={() => handleDeleteCosto(c.id)}
-                                    disabled={deletingCostoId === c.id}
-                                    className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-900/30 disabled:opacity-50 shrink-0">
-                                    {deletingCostoId === c.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                                  </button>
+                                  <div className="flex gap-1 shrink-0">
+                                    <button onClick={() => setEditingCostoId(c.id)}
+                                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-600">
+                                      <Pencil size={13} />
+                                    </button>
+                                    <button onClick={() => handleDeleteCosto(c.id)}
+                                      disabled={deletingCostoId === c.id}
+                                      className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-900/30 disabled:opacity-50">
+                                      {deletingCostoId === c.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                                    </button>
+                                  </div>
                                 </div>
                               )
                             })}
