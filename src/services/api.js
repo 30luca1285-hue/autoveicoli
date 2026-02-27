@@ -53,6 +53,9 @@ export async function getTagliandi() {
 export async function addTagliando(data) {
   return post({ action: 'addTagliando', ...data })
 }
+export async function updateTagliando(data) {
+  return post({ action: 'updateTagliando', ...data })
+}
 export async function deleteTagliando(id) {
   return post({ action: 'deleteTagliando', id })
 }

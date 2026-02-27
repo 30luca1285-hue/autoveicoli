@@ -10,7 +10,9 @@ export function AppProvider({ children }) {
   const [tagliandi, setTagliandi] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [configured, setConfigured] = useState(APPS_SCRIPT_URL !== 'INSERISCI_QUI_URL_APPS_SCRIPT')
+  const [configured, setConfigured] = useState(
+    APPS_SCRIPT_URL !== 'INSERISCI_QUI_URL_APPS_SCRIPT' || !!localStorage.getItem('appsScriptUrl')
+  )
 
   const loadVeicoli = useCallback(async () => {
     if (!configured) return
