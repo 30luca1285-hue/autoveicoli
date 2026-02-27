@@ -2,15 +2,11 @@
 export const APPS_SCRIPT_URL = 'INSERISCI_QUI_URL_APPS_SCRIPT'
 
 export const CATEGORIE = [
-  { id: 'carburante', label: 'Carburante', emoji: '⛽', soloMotorizzati: true },
   { id: 'manutenzione', label: 'Manutenzione', emoji: '🔧', soloMotorizzati: false },
   { id: 'assicurazione', label: 'Assicurazione', emoji: '📋', soloMotorizzati: false },
   { id: 'bollo', label: 'Bollo', emoji: '📜', soloMotorizzati: false },
   { id: 'revisione', label: 'Revisione', emoji: '✅', soloMotorizzati: false },
   { id: 'pneumatici', label: 'Pneumatici', emoji: '🔄', soloMotorizzati: false },
-  { id: 'parcheggio', label: 'Parcheggio/Pedaggi', emoji: '🅿️', soloMotorizzati: false },
-  { id: 'lavaggio', label: 'Lavaggio', emoji: '🚿', soloMotorizzati: false },
-  { id: 'multa', label: 'Multa', emoji: '🚨', soloMotorizzati: false },
   { id: 'altro', label: 'Altro', emoji: '📦', soloMotorizzati: false },
 ]
 

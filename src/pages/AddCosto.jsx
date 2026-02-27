@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
-import { CATEGORIE, TIPI_VEICOLO, TIPI_INTERVENTO } from '../config'
+import { CATEGORIE, TIPI_INTERVENTO } from '../config'
 import { format } from 'date-fns'
 import * as api from '../services/api'
 import { CheckCircle, Loader2 } from 'lucide-react'
 
-// Categorie per cui ha senso impostare un reminder
+// Tutte le categorie tranne "altro" supportano il reminder
 const CATEGORIE_CON_REMINDER = ['manutenzione', 'assicurazione', 'bollo', 'revisione', 'pneumatici']
 
 // Tipo intervento suggerito in base alla categoria
@@ -28,7 +28,6 @@ export default function AddCosto() {
   const [categoria, setCategoria] = useState('')
   const [importo, setImporto] = useState('')
   const [nota, setNota] = useState('')
-  const [litri, setLitri] = useState('')
   const [km, setKm] = useState('')
 
   // Reminder
@@ -37,9 +36,6 @@ export default function AddCosto() {
   const [dataProssima, setDataProssima] = useState('')
   const [kmProssimi, setKmProssimi] = useState('')
 
-  const veicoloSelezionato = veicoli.find(v => v.id === veicoloId)
-  const isMotorizzato = TIPI_VEICOLO.find(t => t.id === veicoloSelezionato?.tipo)?.motorizzato ?? true
-  const categorieFiltrate = CATEGORIE.filter(c => !c.soloMotorizzati || isMotorizzato)
   const showReminder = CATEGORIE_CON_REMINDER.includes(categoria)
 
   function handleSelectCategoria(id) {
@@ -59,7 +55,7 @@ export default function AddCosto() {
     setSaving(true)
     setError(null)
     try {
-      await api.addCosto({ veicoloId, data, categoria, importo, nota, litri, km })
+      await api.addCosto({ veicoloId, data, categoria, importo, nota, km })
       if (hasReminder && (dataProssima || kmProssimi)) {
         await api.addTagliando({
           veicoloId,
@@ -77,7 +73,6 @@ export default function AddCosto() {
       setSuccess(true)
       setImporto('')
       setNota('')
-      setLitri('')
       setKm('')
       setHasReminder(false)
       setDataProssima('')
@@ -138,7 +133,7 @@ export default function AddCosto() {
           <div>
             <label className="text-xs text-slate-400 font-medium mb-1 block">Categoria *</label>
             <div className="grid grid-cols-3 gap-2">
-              {categorieFiltrate.map(c => (
+              {CATEGORIE.map(c => (
                 <button
                   key={c.id}
                   type="button"
@@ -179,21 +174,6 @@ export default function AddCosto() {
             className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm"
           />
         </div>
-
-        {/* Litri (solo carburante) */}
-        {categoria === 'carburante' && (
-          <div>
-            <label className="text-xs text-slate-400 font-medium mb-1 block">Litri</label>
-            <input
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={litri}
-              onChange={e => setLitri(e.target.value)}
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm"
-            />
-          </div>
-        )}
 
         {/* Importo */}
         <div>
