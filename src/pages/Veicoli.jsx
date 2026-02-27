@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
-import { TIPI_VEICOLO, CARBURANTI, INTERVALLI_REVISIONE } from '../config'
+import { TIPI_VEICOLO, CARBURANTI, INTERVALLI_REVISIONE, CATEGORIE } from '../config'
 import * as api from '../services/api'
 import { addDays, parseISO, isBefore, isAfter } from 'date-fns'
 import { Plus, Trash2, Loader2, X, ChevronDown, Save, Pencil, Bell, Wrench } from 'lucide-react'
@@ -323,6 +323,9 @@ export default function Veicoli() {
   const [deleting, setDeleting] = useState(null)
   const [editingTagliandoId, setEditingTagliandoId] = useState(null)
   const [deletingTagliandoId, setDeletingTagliandoId] = useState(null)
+  const [deletingCostoId, setDeletingCostoId] = useState(null)
+  const [expandedInterventi, setExpandedInterventi] = useState({})
+  const [expandedReminder, setExpandedReminder] = useState({})
 
   function handleSave(newVeicolo) {
     if (newVeicolo) {
@@ -344,6 +347,17 @@ export default function Veicoli() {
       await Promise.all([refreshVeicoli(), refreshCosti(), refreshTagliandi()])
     } finally {
       setDeleting(null)
+    }
+  }
+
+  async function handleDeleteCosto(id) {
+    if (!confirm('Eliminare questa spesa?')) return
+    setDeletingCostoId(id)
+    try {
+      await api.deleteCosto(id)
+      await refreshCosti()
+    } finally {
+      setDeletingCostoId(null)
     }
   }
 
@@ -458,67 +472,68 @@ export default function Veicoli() {
                         )}
                       </div>
 
-                      {/* Sezione Interventi */}
+                      {/* Sezione Interventi (da costi, escluso carburante) */}
                       {(() => {
-                        const vInterventi = tagliandi.filter(t => String(t.veicoloId) === String(v.id))
-                        if (vInterventi.length === 0) return null
+                        const catIds = new Set(CATEGORIE.map(c => c.id))
+                        const vCosti = costi
+                          .filter(c => String(c.veicoloId) === String(v.id) && catIds.has(c.categoria))
+                          .sort((a, b) => b.data.localeCompare(a.data))
+                        if (vCosti.length === 0) return null
+                        const LIMIT = 3
+                        const isExp = expandedInterventi[v.id]
+                        const shown = isExp ? vCosti : vCosti.slice(0, LIMIT)
                         return (
                           <div className="space-y-2">
                             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1">
-                              <Wrench size={11} /> Interventi
+                              <Wrench size={11} /> Interventi ({vCosti.length})
                             </p>
-                            {vInterventi.map(t => {
-                              const isEditingThis = editingTagliandoId === t.id
-                              if (isEditingThis) {
-                                return (
-                                  <TagliandoEditRow key={t.id} t={t}
-                                    onSave={handleUpdateTagliando}
-                                    onCancel={() => setEditingTagliandoId(null)} />
-                                )
-                              }
+                            {shown.map(c => {
+                              const catObj = CATEGORIE.find(cat => cat.id === c.categoria)
                               return (
-                                <div key={t.id} className="rounded-xl p-2.5 flex items-start justify-between gap-2 bg-slate-700">
+                                <div key={c.id} className="rounded-xl p-2.5 flex items-start justify-between gap-2 bg-slate-700">
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-semibold text-white">{t.tipo}</p>
-                                    {t.data && (
-                                      <p className="text-xs text-slate-400 mt-0.5">Effettuato: {t.data}</p>
-                                    )}
-                                    {t.km && (
-                                      <p className="text-xs text-slate-500">KM: {Number(t.km).toLocaleString('it-IT')}</p>
-                                    )}
-                                    <p className="text-xs text-slate-400 font-medium mt-0.5">€ {t.importo ? Number(t.importo).toFixed(2) : '—'}</p>
-                                    {t.nota && (
-                                      <p className="text-xs text-slate-500 italic">{t.nota}</p>
-                                    )}
+                                    <p className="text-xs font-semibold text-white">
+                                      {catObj?.emoji} {catObj?.label || c.categoria}
+                                    </p>
+                                    {c.data && <p className="text-xs text-slate-400 mt-0.5">{c.data}</p>}
+                                    {c.km && <p className="text-xs text-slate-500">KM: {Number(c.km).toLocaleString('it-IT')}</p>}
+                                    <p className="text-xs text-slate-400 font-medium mt-0.5">€ {c.importo ? Number(c.importo).toFixed(2) : '—'}</p>
+                                    {c.nota && <p className="text-xs text-slate-500 italic">{c.nota}</p>}
                                   </div>
-                                  <div className="flex gap-1 shrink-0">
-                                    <button onClick={() => setEditingTagliandoId(t.id)}
-                                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-600">
-                                      <Pencil size={13} />
-                                    </button>
-                                    <button onClick={() => handleDeleteTagliando(t.id)}
-                                      disabled={deletingTagliandoId === t.id}
-                                      className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-900/30 disabled:opacity-50">
-                                      {deletingTagliandoId === t.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                                    </button>
-                                  </div>
+                                  <button onClick={() => handleDeleteCosto(c.id)}
+                                    disabled={deletingCostoId === c.id}
+                                    className="p-1.5 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-900/30 disabled:opacity-50 shrink-0">
+                                    {deletingCostoId === c.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                                  </button>
                                 </div>
                               )
                             })}
+                            {vCosti.length > LIMIT && (
+                              <button onClick={() => setExpandedInterventi(prev => ({ ...prev, [v.id]: !isExp }))}
+                                className="w-full text-xs text-slate-500 hover:text-slate-300 py-1 flex items-center justify-center gap-1">
+                                <ChevronDown size={13} className={isExp ? 'rotate-180' : ''} />
+                                {isExp ? 'Mostra meno' : `Mostra tutti (${vCosti.length})`}
+                              </button>
+                            )}
                           </div>
                         )
                       })()}
 
                       {/* Sezione Reminder */}
                       {(() => {
-                        const vReminder = tagliandi.filter(t => String(t.veicoloId) === String(v.id) && t.dataProssima)
+                        const vReminder = tagliandi
+                          .filter(t => String(t.veicoloId) === String(v.id) && t.dataProssima)
+                          .sort((a, b) => a.dataProssima.localeCompare(b.dataProssima))
                         if (vReminder.length === 0) return null
+                        const LIMIT = 3
+                        const isExp = expandedReminder[v.id]
+                        const shown = isExp ? vReminder : vReminder.slice(0, LIMIT)
                         return (
                           <div className="space-y-2">
                             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1">
-                              <Bell size={11} /> Reminder
+                              <Bell size={11} /> Reminder ({vReminder.length})
                             </p>
-                            {vReminder.map(t => {
+                            {shown.map(t => {
                               const isEditingThis = editingTagliandoId === t.id
                               if (isEditingThis) {
                                 return (
@@ -565,6 +580,13 @@ export default function Veicoli() {
                                 </div>
                               )
                             })}
+                            {vReminder.length > LIMIT && (
+                              <button onClick={() => setExpandedReminder(prev => ({ ...prev, [v.id]: !isExp }))}
+                                className="w-full text-xs text-slate-500 hover:text-slate-300 py-1 flex items-center justify-center gap-1">
+                                <ChevronDown size={13} className={isExp ? 'rotate-180' : ''} />
+                                {isExp ? 'Mostra meno' : `Mostra tutti (${vReminder.length})`}
+                              </button>
+                            )}
                           </div>
                         )
                       })()}
