@@ -245,13 +245,14 @@ function VeicoloEdit({ veicolo, onSave, onCancel }) {
 function TagliandoEditRow({ t, onSave, onCancel }) {
   const [dataProssima, setDataProssima] = useState(t.dataProssima || '')
   const [kmProssimi, setKmProssimi] = useState(t.kmProssimi || '')
+  const [importo, setImporto] = useState(t.importo || '')
   const [nota, setNota] = useState(t.nota || '')
   const [saving, setSaving] = useState(false)
 
   async function handleSave() {
     setSaving(true)
     try {
-      await api.updateTagliando({ id: t.id, dataProssima, kmProssimi, nota })
+      await api.updateTagliando({ id: t.id, dataProssima, kmProssimi, importo, nota })
       onSave()
     } finally {
       setSaving(false)
@@ -273,10 +274,17 @@ function TagliandoEditRow({ t, onSave, onCancel }) {
             className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
         </div>
       </div>
-      <div>
-        <label className="text-xs text-slate-400 mb-0.5 block">Nota</label>
-        <input type="text" placeholder="..." value={nota} onChange={e => setNota(e.target.value)}
-          className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs text-slate-400 mb-0.5 block">Importo €</label>
+          <input type="number" step="0.01" placeholder="0.00" value={importo} onChange={e => setImporto(e.target.value)}
+            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 mb-0.5 block">Nota</label>
+          <input type="text" placeholder="..." value={nota} onChange={e => setNota(e.target.value)}
+            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+        </div>
       </div>
       <div className="flex gap-2">
         <button type="button" onClick={onCancel}
@@ -373,7 +381,6 @@ export default function Veicoli() {
           const tipoObj = TIPI_VEICOLO.find(t => t.id === v.tipo)
           const carbObj = CARBURANTI.find(c => c.id === v.carburante)
           const totale = getTotale(v.id)
-          const nTagliandi = tagliandi.filter(t => t.veicoloId === v.id).length
           const isExpanded = expandedId === v.id
           const isEditing = editingId === v.id
 
@@ -399,19 +406,9 @@ export default function Veicoli() {
                 <div className="px-4 pb-4 space-y-3">
                   {!isEditing ? (
                     <>
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="bg-slate-700 rounded-xl p-2">
-                          <p className="text-lg font-bold">€ {totale.toFixed(0)}</p>
-                          <p className="text-xs text-slate-400">Tot. spese</p>
-                        </div>
-                        <div className="bg-slate-700 rounded-xl p-2">
-                          <p className="text-lg font-bold">{costi.filter(c => c.veicoloId === v.id).length}</p>
-                          <p className="text-xs text-slate-400">Movimenti</p>
-                        </div>
-                        <div className="bg-slate-700 rounded-xl p-2">
-                          <p className="text-lg font-bold">{nTagliandi}</p>
-                          <p className="text-xs text-slate-400">Interventi</p>
-                        </div>
+                      <div className="bg-slate-700 rounded-xl p-2 text-center">
+                        <p className="text-lg font-bold">€ {totale.toFixed(0)}</p>
+                        <p className="text-xs text-slate-400">Tot. spese</p>
                       </div>
 
                       <div className="bg-slate-700/50 rounded-xl p-3 space-y-2 text-sm">
@@ -475,6 +472,7 @@ export default function Veicoli() {
                                     {t.km && (
                                       <p className="text-xs text-slate-500">KM: {Number(t.km).toLocaleString('it-IT')}</p>
                                     )}
+                                    <p className="text-xs text-slate-400 font-medium mt-0.5">€ {t.importo ? Number(t.importo).toFixed(2) : '—'}</p>
                                     {t.nota && (
                                       <p className="text-xs text-slate-500 italic">{t.nota}</p>
                                     )}
@@ -507,28 +505,42 @@ export default function Veicoli() {
                               <Bell size={11} /> Reminder
                             </p>
                             {vReminder.map(t => {
+                              const isEditingThis = editingTagliandoId === t.id
+                              if (isEditingThis) {
+                                return (
+                                  <TagliandoEditRow key={`r-${t.id}`} t={t}
+                                    onSave={handleUpdateTagliando}
+                                    onCancel={() => setEditingTagliandoId(null)} />
+                                )
+                              }
                               const status = getTagliandoStatus(t.dataProssima)
                               return (
                                 <div key={`r-${t.id}`}
-                                  className={`rounded-xl p-2.5 ${
+                                  className={`rounded-xl p-2.5 flex items-start justify-between gap-2 ${
                                     status === 'scaduto' ? 'bg-red-900/30 border border-red-700/50' :
                                     status === 'vicino'  ? 'bg-amber-900/30 border border-amber-700/50' :
                                                           'bg-slate-700/60'
                                   }`}>
-                                  <p className={`text-xs font-semibold ${
-                                    status === 'scaduto' ? 'text-red-300' :
-                                    status === 'vicino'  ? 'text-amber-300' : 'text-white'
-                                  }`}>
-                                    {t.tipo}
-                                    {status === 'scaduto' && ' — SCADUTO'}
-                                  </p>
-                                  <p className="text-xs text-slate-400 mt-0.5">Prossima: {t.dataProssima}</p>
-                                  {t.kmProssimi && (
-                                    <p className="text-xs text-slate-500">KM: {Number(t.kmProssimi).toLocaleString('it-IT')}</p>
-                                  )}
-                                  {t.nota && (
-                                    <p className="text-xs text-slate-400 mt-0.5 italic">{t.nota}</p>
-                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <p className={`text-xs font-semibold ${
+                                      status === 'scaduto' ? 'text-red-300' :
+                                      status === 'vicino'  ? 'text-amber-300' : 'text-white'
+                                    }`}>
+                                      {t.tipo}
+                                      {status === 'scaduto' && ' — SCADUTO'}
+                                    </p>
+                                    <p className="text-xs text-slate-400 mt-0.5">Prossima: {t.dataProssima}</p>
+                                    {t.kmProssimi && (
+                                      <p className="text-xs text-slate-500">KM: {Number(t.kmProssimi).toLocaleString('it-IT')}</p>
+                                    )}
+                                    {t.nota && (
+                                      <p className="text-xs text-slate-400 mt-0.5 italic">{t.nota}</p>
+                                    )}
+                                  </div>
+                                  <button onClick={() => setEditingTagliandoId(t.id)}
+                                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-600/50 shrink-0">
+                                    <Pencil size={13} />
+                                  </button>
                                 </div>
                               )
                             })}

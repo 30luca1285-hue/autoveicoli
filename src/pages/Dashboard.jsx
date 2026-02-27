@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { CATEGORIE, TIPI_VEICOLO } from '../config'
 import { format, isAfter, isBefore, addDays, parseISO, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
-import { AlertTriangle, Car, RefreshCw, CalendarClock } from 'lucide-react'
+import { AlertTriangle, Car, RefreshCw, CalendarClock, ChevronDown } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 function meseCorrente() {
@@ -13,6 +14,7 @@ function meseCorrente() {
 export default function Dashboard() {
   const { veicoli, costi, tagliandi, loading, error, configured, refresh } = useApp()
   const navigate = useNavigate()
+  const [expandedAppId, setExpandedAppId] = useState(null)
   const { mese, anno } = meseCorrente()
 
   if (!configured) {
@@ -169,25 +171,45 @@ export default function Dashboard() {
                   const questoMese = d.getMonth() === oggi.getMonth() && d.getFullYear() === oggi.getFullYear()
                   const prossimoMese = d.getMonth() === (oggi.getMonth() + 1) % 12
                   return (
-                    <div key={t.id} className={`flex items-center justify-between rounded-xl px-3 py-2.5 ${
-                      questoMese
-                        ? 'bg-amber-900/30 border border-amber-700/40'
-                        : prossimoMese
-                          ? 'bg-slate-700/80 border border-slate-600/50'
-                          : 'bg-slate-700/50'
-                    }`}>
-                      <div className="min-w-0 flex-1">
-                        <p className={`text-sm font-medium ${questoMese ? 'text-amber-200' : 'text-white'}`}>
-                          {t.tipo}
-                        </p>
-                        {t.nota && <p className="text-xs text-slate-400 italic truncate">{t.nota}</p>}
+                    <div key={t.id}
+                      className={`rounded-xl px-3 py-2.5 cursor-pointer select-none ${
+                        questoMese
+                          ? 'bg-amber-900/30 border border-amber-700/40'
+                          : prossimoMese
+                            ? 'bg-slate-700/80 border border-slate-600/50'
+                            : 'bg-slate-700/50'
+                      }`}
+                      onClick={() => setExpandedAppId(expandedAppId === t.id ? null : t.id)}>
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-sm font-medium ${questoMese ? 'text-amber-200' : 'text-white'}`}>
+                            {t.tipo}
+                          </p>
+                          {t.nota && <p className="text-xs text-slate-400 italic truncate">{t.nota}</p>}
+                        </div>
+                        <div className="text-right shrink-0 ml-2 flex items-center gap-1.5">
+                          <div>
+                            <p className="text-xs text-slate-300">{t.dataProssima}</p>
+                            <p className={`text-xs font-medium ${questoMese ? 'text-amber-400' : 'text-slate-400'}`}>
+                              {giorni === 0 ? 'oggi' : giorni === 1 ? 'domani' : `tra ${giorni}gg`}
+                            </p>
+                          </div>
+                          <ChevronDown size={14} className={`text-slate-500 transition-transform ${expandedAppId === t.id ? 'rotate-180' : ''}`} />
+                        </div>
                       </div>
-                      <div className="text-right shrink-0 ml-2">
-                        <p className="text-xs text-slate-300">{t.dataProssima}</p>
-                        <p className={`text-xs font-medium ${questoMese ? 'text-amber-400' : 'text-slate-400'}`}>
-                          {giorni === 0 ? 'oggi' : giorni === 1 ? 'domani' : `tra ${giorni}gg`}
-                        </p>
-                      </div>
+                      {expandedAppId === t.id && (
+                        <div className="mt-2 pt-2 border-t border-slate-600/40 space-y-1">
+                          {t.kmProssimi && (
+                            <p className="text-xs text-slate-400">KM previsti: {Number(t.kmProssimi).toLocaleString('it-IT')}</p>
+                          )}
+                          {t.importo && (
+                            <p className="text-xs text-slate-400">Importo previsto: <span className="text-white font-medium">€ {Number(t.importo).toFixed(2)}</span></p>
+                          )}
+                          {!t.kmProssimi && !t.importo && !t.nota && (
+                            <p className="text-xs text-slate-500 italic">Nessun dettaglio aggiuntivo</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
