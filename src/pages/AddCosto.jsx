@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
-import { CATEGORIE, TIPI_INTERVENTO } from '../config'
+import { CATEGORIE, TIPI_VEICOLO, TIPI_INTERVENTO } from '../config'
 import { format } from 'date-fns'
 import * as api from '../services/api'
 import { CheckCircle, Loader2 } from 'lucide-react'
