@@ -6,6 +6,12 @@ import { it } from 'date-fns/locale'
 import { AlertTriangle, Car, RefreshCw, CalendarClock, ChevronDown } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
+function fmtDate(s) {
+  if (!s) return '—'
+  const parts = s.split('-')
+  return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : s
+}
+
 function meseCorrente() {
   const now = new Date()
   return { mese: now.getMonth() + 1, anno: now.getFullYear() }
@@ -118,7 +124,7 @@ export default function Dashboard() {
                 <AlertTriangle size={18} className="text-red-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-red-300">{t.tipo} — SCADUTO</p>
-                  <p className="text-xs text-slate-400">{v?.nome} · {t.dataProssima}</p>
+                  <p className="text-xs text-slate-400">{v?.nome} · {fmtDate(t.dataProssima)}</p>
                   {t.nota && <p className="text-xs text-slate-500 italic mt-0.5">{t.nota}</p>}
                 </div>
               </div>
@@ -131,7 +137,7 @@ export default function Dashboard() {
                 <AlertTriangle size={18} className="text-amber-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-semibold text-amber-300">{t.tipo}</p>
-                  <p className="text-xs text-slate-400">{v?.nome} · {t.dataProssima}</p>
+                  <p className="text-xs text-slate-400">{v?.nome} · {fmtDate(t.dataProssima)}</p>
                   {t.nota && <p className="text-xs text-slate-500 italic mt-0.5">{t.nota}</p>}
                 </div>
               </div>
@@ -189,7 +195,7 @@ export default function Dashboard() {
                         </div>
                         <div className="text-right shrink-0 ml-2 flex items-center gap-1.5">
                           <div>
-                            <p className="text-xs text-slate-300">{t.dataProssima}</p>
+                            <p className="text-xs text-slate-300">{fmtDate(t.dataProssima)}</p>
                             <p className={`text-xs font-medium ${questoMese ? 'text-amber-400' : 'text-slate-400'}`}>
                               {giorni === 0 ? 'oggi' : giorni === 1 ? 'domani' : `tra ${giorni}gg`}
                             </p>
@@ -254,7 +260,7 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-sm">€ {Number(c.importo).toFixed(2)}</p>
-                  <p className="text-xs text-slate-400">{c.data}</p>
+                  <p className="text-xs text-slate-400">{fmtDate(c.data)}</p>
                 </div>
               </div>
             )
