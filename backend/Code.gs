@@ -229,7 +229,38 @@ function deleteFromSheet(sheetName, headers, id) {
   return { ok: false, error: 'not found' }
 }
 
-// ── NOTIFICHE EMAIL MENSILI ────────────────────────────────────────────────
+// ── NOTIFICHE TELEGRAM ─────────────────────────────────────────────────────
+
+function saveTelegramConfig(p) {
+  const props = PropertiesService.getScriptProperties()
+  if (p.botToken !== undefined) props.setProperty('TG_BOT_TOKEN', p.botToken)
+  if (p.chatId !== undefined)   props.setProperty('TG_CHAT_ID',   p.chatId)
+  return { ok: true }
+}
+
+function sendTelegramMessage(text) {
+  const props = PropertiesService.getScriptProperties()
+  const token  = props.getProperty('TG_BOT_TOKEN')
+  const chatId = props.getProperty('TG_CHAT_ID')
+  if (!token || !chatId) throw new Error('Telegram non configurato: imposta Bot Token e Chat ID nelle Impostazioni')
+
+  const res = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify({ chat_id: chatId, text: text, parse_mode: 'HTML' }),
+    muteHttpExceptions: true
+  })
+  const data = JSON.parse(res.getContentText())
+  if (!data.ok) throw new Error('Telegram API error: ' + data.description)
+  return data
+}
+
+function testTelegram() {
+  sendTelegramMessage('✅ <b>Autoveicoli</b> — connessione Telegram funzionante!')
+  return { ok: true }
+}
+
+// ── NOTIFICHE MENSILI ──────────────────────────────────────────────────────
 
 function checkScadenzeMensili() {
   const oggi = new Date()
@@ -249,7 +280,7 @@ function checkScadenzeMensili() {
     if (!t.dataProssima) return
     const d = new Date(t.dataProssima)
     const v = veicoli.find(v => v.id === t.veicoloId)
-    const nome = v ? v.nome + ' (' + v.targa + ')' : 'Veicolo sconosciuto'
+    const nome = v ? v.nome + (v.targa ? ' (' + v.targa + ')' : '') : 'Veicolo sconosciuto'
     const item = { nome, tipo: t.tipo, data: t.dataProssima }
 
     if (d < oggi) {
@@ -262,36 +293,23 @@ function checkScadenzeMensili() {
   if (scadute.length === 0 && questoMese.length === 0) return
 
   const meseTitolo = MESI[mese] + ' ' + anno
-
-  let html = `
-    <div style="font-family:sans-serif;max-width:500px;margin:0 auto">
-      <h2 style="color:#1e40af">🚗 Autoveicoli — Scadenze ${meseTitolo}</h2>`
+  let msg = '🚗 <b>Autoveicoli — Scadenze ' + meseTitolo + '</b>\n'
 
   if (scadute.length > 0) {
-    html += `<h3 style="color:#dc2626">🔴 Già scadute</h3><ul>`
+    msg += '\n🔴 <b>Già scadute</b>\n'
     scadute.forEach(s => {
-      html += `<li><strong>${s.nome}</strong> — ${s.tipo} — scadenza: <strong>${s.data}</strong></li>`
+      msg += '• <b>' + s.nome + '</b> — ' + s.tipo + ' — ' + s.data + '\n'
     })
-    html += `</ul>`
   }
 
   if (questoMese.length > 0) {
-    html += `<h3 style="color:#d97706">🟡 In scadenza questo mese</h3><ul>`
+    msg += '\n🟡 <b>In scadenza questo mese</b>\n'
     questoMese.forEach(s => {
-      html += `<li><strong>${s.nome}</strong> — ${s.tipo} — scadenza: <strong>${s.data}</strong></li>`
+      msg += '• <b>' + s.nome + '</b> — ' + s.tipo + ' — ' + s.data + '\n'
     })
-    html += `</ul>`
   }
 
-  html += `<p style="color:#64748b;font-size:12px;margin-top:24px">
-    Apri l'app per i dettagli completi.</p></div>`
-
-  const email = Session.getActiveUser().getEmail()
-  MailApp.sendEmail({
-    to: email,
-    subject: '🚗 Autoveicoli — Scadenze ' + meseTitolo,
-    htmlBody: html
-  })
+  sendTelegramMessage(msg)
 }
 
 // Esegui questa funzione UNA SOLA VOLTA dall'editor Apps Script per attivare il trigger
@@ -339,6 +357,7 @@ function doGet(e) {
       case 'getCosti':     result = getCosti(); break
       case 'getTagliandi': result = getTagliandi(); break
       case 'setupTrigger':  result = setupMonthlyTrigger(); break
+      case 'testTelegram':  result = testTelegram(); break
       case 'migrate':       result = migrateVeicoli(); break
       default:             result = { error: 'Unknown action: ' + action }
     }
@@ -362,10 +381,11 @@ function doPost(e) {
       case 'addCosto':        result = addCosto(body); break
       case 'updateCosto':     result = updateCosto(body); break
       case 'deleteCosto':     result = deleteCosto(body.id); break
-      case 'addTagliando':    result = addTagliando(body); break
-      case 'updateTagliando': result = updateTagliando(body); break
-      case 'deleteTagliando': result = deleteTagliando(body.id); break
-      default:                result = { error: 'Unknown action: ' + action }
+      case 'addTagliando':        result = addTagliando(body); break
+      case 'updateTagliando':     result = updateTagliando(body); break
+      case 'deleteTagliando':     result = deleteTagliando(body.id); break
+      case 'saveTelegramConfig':  result = saveTelegramConfig(body); break
+      default:                    result = { error: 'Unknown action: ' + action }
     }
     return corsResponse(result)
   } catch (err) {

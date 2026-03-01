@@ -62,3 +62,11 @@ export async function updateTagliando(data) {
 export async function deleteTagliando(id) {
   return post({ action: 'deleteTagliando', id })
 }
+
+// TELEGRAM
+export async function saveTelegramConfig({ botToken, chatId }) {
+  return post({ action: 'saveTelegramConfig', botToken, chatId })
+}
+export async function testTelegram() {
+  return call({ action: 'testTelegram' })
+}
