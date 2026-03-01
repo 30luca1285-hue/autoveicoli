@@ -157,7 +157,7 @@ export default function Impostazioni() {
       {/* Info app */}
       <div className="bg-slate-800 rounded-2xl p-4 space-y-1">
         <p className="font-semibold">Informazioni</p>
-        <p className="text-sm text-slate-400">Autoveicoli v0.5.8</p>
+        <p className="text-sm text-slate-400">Autoveicoli v0.5.9</p>
         <p className="text-sm text-slate-400">Gestione costi e manutenzione veicoli</p>
       </div>
     </div>
