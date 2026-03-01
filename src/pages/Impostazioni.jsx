@@ -30,21 +30,29 @@ export default function Impostazioni() {
 
   async function handleTgSave() {
     if (!tgToken || !tgChatId) return
-    localStorage.setItem('tgBotToken', tgToken)
-    localStorage.setItem('tgChatId', tgChatId)
-    await saveTelegramConfig({ botToken: tgToken, chatId: tgChatId })
-    setTgSaved(true)
-    setTimeout(() => setTgSaved(false), 2000)
+    try {
+      const res = await saveTelegramConfig({ botToken: tgToken, chatId: tgChatId })
+      if (res.error) throw new Error(res.error)
+      localStorage.setItem('tgBotToken', tgToken)
+      localStorage.setItem('tgChatId', tgChatId)
+      setTgSaved(true)
+      setTimeout(() => setTgSaved(false), 2000)
+    } catch (e) {
+      setTgTestResult('error')
+      console.error('Telegram save error:', e)
+    }
   }
 
   async function handleTgTest() {
     setTgTesting(true)
     setTgTestResult(null)
     try {
-      await testTelegram()
+      const res = await testTelegram()
+      if (res.error) throw new Error(res.error)
       setTgTestResult('ok')
-    } catch {
+    } catch (e) {
       setTgTestResult('error')
+      console.error('Telegram test error:', e)
     } finally {
       setTgTesting(false)
     }
