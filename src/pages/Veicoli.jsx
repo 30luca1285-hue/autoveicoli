@@ -24,7 +24,6 @@ function VeicoloForm({ onSave, onCancel }) {
   const [nome, setNome] = useState('')
   const [targa, setTarga] = useState('')
   const [tipo, setTipo] = useState('auto')
-  const [anno, setAnno] = useState(new Date().getFullYear().toString())
   const [dataImmatricolazione, setDataImmatricolazione] = useState('')
   const [carburante, setCarburante] = useState('')
   const [intervaloRevisione, setIntervaloRevisione] = useState('24')
@@ -43,9 +42,9 @@ function VeicoloForm({ onSave, onCancel }) {
     setSaving(true)
     setError(null)
     try {
-      const result = await api.addVeicolo({ nome, targa, tipo, anno, dataImmatricolazione, carburante, intervaloRevisione, kmAttuali, nota })
+      const result = await api.addVeicolo({ nome, targa, tipo, dataImmatricolazione, carburante, intervaloRevisione, kmAttuali, nota })
       if (result.error) throw new Error(result.error)
-      onSave({ id: result.id, nome, targa, tipo, anno, dataImmatricolazione, carburante, intervaloRevisione, kmAttuali, nota })
+      onSave({ id: result.id, nome, targa, tipo, dataImmatricolazione, carburante, intervaloRevisione, kmAttuali, nota })
     } catch (err) {
       setError('Errore nel salvataggio: ' + err.message)
     } finally {
@@ -78,14 +77,6 @@ function VeicoloForm({ onSave, onCancel }) {
           <input type="text" placeholder="AB123CD" value={targa} onChange={e => setTarga(e.target.value.toUpperCase())}
             className="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2.5 text-white text-sm" />
         </div>
-        <div>
-          <label className="text-xs text-slate-400 mb-1 block">Anno</label>
-          <input type="number" placeholder="2020" value={anno} onChange={e => setAnno(e.target.value)}
-            className="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2.5 text-white text-sm" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs text-slate-400 mb-1 block">Data immatricolazione</label>
           <input type="date" value={dataImmatricolazione} onChange={e => setDataImmatricolazione(e.target.value)}
@@ -164,7 +155,6 @@ function VeicoloEdit({ veicolo, onSave, onCancel }) {
   const [nome, setNome] = useState(veicolo.nome || '')
   const [targa, setTarga] = useState(veicolo.targa || '')
   const [tipo, setTipo] = useState(veicolo.tipo || 'auto')
-  const [anno, setAnno] = useState(veicolo.anno || '')
   const [dataImmatricolazione, setDataImmatricolazione] = useState(veicolo.dataImmatricolazione || '')
   const [carburante, setCarburante] = useState(veicolo.carburante || '')
   const [intervaloRevisione, setIntervaloRevisione] = useState(veicolo.intervaloRevisione || '24')
@@ -178,7 +168,7 @@ function VeicoloEdit({ veicolo, onSave, onCancel }) {
     e.preventDefault()
     setSaving(true)
     try {
-      await api.updateVeicolo({ id: veicolo.id, nome, targa, tipo, anno, dataImmatricolazione, carburante, intervaloRevisione, kmAttuali, nota })
+      await api.updateVeicolo({ id: veicolo.id, nome, targa, tipo, dataImmatricolazione, carburante, intervaloRevisione, kmAttuali, nota })
       onSave()
     } finally {
       setSaving(false)
@@ -254,6 +244,65 @@ function VeicoloEdit({ veicolo, onSave, onCancel }) {
         </button>
       </div>
     </form>
+  )
+}
+
+function ReminderAddForm({ veicoloId, onSave, onCancel }) {
+  const [tipo, setTipo] = useState(TIPI_INTERVENTO[0])
+  const [dataProssima, setDataProssima] = useState('')
+  const [kmProssimi, setKmProssimi] = useState('')
+  const [nota, setNota] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    if (!dataProssima) return
+    setSaving(true)
+    try {
+      await api.addTagliando({ veicoloId, tipo, dataProssima, kmProssimi, nota })
+      onSave()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-slate-700 rounded-xl p-3 space-y-2">
+      <div>
+        <label className="text-xs text-slate-400 mb-0.5 block">Tipo</label>
+        <select value={tipo} onChange={e => setTipo(e.target.value)}
+          className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs">
+          {TIPI_INTERVENTO.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs text-slate-400 mb-0.5 block">Scadenza *</label>
+          <input type="date" value={dataProssima} onChange={e => setDataProssima(e.target.value)}
+            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 mb-0.5 block">KM scadenza</label>
+          <input type="number" placeholder="—" value={kmProssimi} onChange={e => setKmProssimi(e.target.value)}
+            className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+        </div>
+      </div>
+      <div>
+        <label className="text-xs text-slate-400 mb-0.5 block">Nota</label>
+        <input type="text" placeholder="..." value={nota} onChange={e => setNota(e.target.value)}
+          className="w-full bg-slate-600 border border-slate-500 rounded-lg px-2 py-1.5 text-white text-xs" />
+      </div>
+      <div className="flex gap-2">
+        <button type="button" onClick={onCancel}
+          className="flex-1 py-1.5 rounded-lg border border-slate-500 text-slate-300 text-xs">
+          Annulla
+        </button>
+        <button type="button" onClick={handleSave} disabled={saving || !dataProssima}
+          className="flex-1 bg-blue-600 text-white py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 disabled:opacity-50">
+          {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+          {saving ? 'Salvo...' : 'Salva'}
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -447,6 +496,7 @@ export default function Veicoli() {
   const [deletingCostoId, setDeletingCostoId] = useState(null)
   const [expandedInterventi, setExpandedInterventi] = useState({})
   const [expandedReminder, setExpandedReminder] = useState({})
+  const [addingReminderId, setAddingReminderId] = useState(null)
 
   function handleSave(newVeicolo) {
     if (newVeicolo) {
@@ -503,6 +553,11 @@ export default function Veicoli() {
     setEditingTagliandoId(null)
   }
 
+  async function handleSaveReminder(vId) {
+    await refreshTagliandi()
+    setAddingReminderId(null)
+  }
+
   function getTagliandoStatus(dataProssima) {
     if (!dataProssima) return null
     const oggi = new Date()
@@ -546,7 +601,7 @@ export default function Veicoli() {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold truncate">{v.nome}</p>
                   <p className="text-xs text-slate-400">
-                    {v.targa} · {v.anno}{carbObj ? ` · ${carbObj.emoji} ${carbObj.label}` : ''}
+                    {v.targa}{v.dataImmatricolazione ? ` · ${v.dataImmatricolazione.split('-')[0]}` : v.anno ? ` · ${v.anno}` : ''}{carbObj ? ` · ${carbObj.emoji} ${carbObj.label}` : ''}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
@@ -667,15 +722,29 @@ export default function Veicoli() {
                         const vReminder = tagliandi
                           .filter(t => String(t.veicoloId) === String(v.id) && t.dataProssima)
                           .sort((a, b) => a.dataProssima.localeCompare(b.dataProssima))
-                        if (vReminder.length === 0) return null
                         const LIMIT = 3
                         const isExp = expandedReminder[v.id]
                         const shown = isExp ? vReminder : vReminder.slice(0, LIMIT)
+                        const isAddingHere = addingReminderId === v.id
                         return (
                           <div className="space-y-2">
-                            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1">
-                              <Bell size={11} /> Reminder ({vReminder.length})
-                            </p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex items-center gap-1">
+                                <Bell size={11} /> Reminder{vReminder.length > 0 ? ` (${vReminder.length})` : ''}
+                              </p>
+                              {!isAddingHere && (
+                                <button onClick={() => setAddingReminderId(v.id)}
+                                  className="flex items-center gap-0.5 text-xs text-blue-400 hover:text-blue-300">
+                                  <Plus size={12} /> Aggiungi
+                                </button>
+                              )}
+                            </div>
+                            {isAddingHere && (
+                              <ReminderAddForm
+                                veicoloId={v.id}
+                                onSave={() => handleSaveReminder(v.id)}
+                                onCancel={() => setAddingReminderId(null)} />
+                            )}
                             {shown.map(t => {
                               const isEditingThis = editingTagliandoId === t.id
                               if (isEditingThis) {
@@ -701,7 +770,7 @@ export default function Veicoli() {
                                       {t.tipo}
                                       {status === 'scaduto' && ' — SCADUTO'}
                                     </p>
-                                    <p className="text-xs text-slate-400 mt-0.5">Prossima: {fmtDate(t.dataProssima)}</p>
+                                    <p className="text-xs text-slate-400 mt-0.5">Scadenza: {fmtDate(t.dataProssima)}</p>
                                     {t.kmProssimi && (
                                       <p className="text-xs text-slate-500">KM: {Number(t.kmProssimi).toLocaleString('it-IT')}</p>
                                     )}
