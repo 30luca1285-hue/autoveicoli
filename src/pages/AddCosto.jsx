@@ -48,28 +48,35 @@ export default function AddCosto() {
 
   async function handleSave(e) {
     e.preventDefault()
-    if (!veicoloId || !categoria || !importo) {
+    const soloReminder = hasReminder && !importo && (dataProssima || kmProssimi)
+    if (!veicoloId) {
+      setError('Seleziona un veicolo')
+      return
+    }
+    if (!soloReminder && (!categoria || !importo)) {
       setError('Compila tutti i campi obbligatori')
       return
     }
     setSaving(true)
     setError(null)
     try {
-      await api.addCosto({ veicoloId, data, categoria, importo, nota, km })
+      if (!soloReminder) {
+        await api.addCosto({ veicoloId, data, categoria, importo, nota, km })
+      }
       if (hasReminder && (dataProssima || kmProssimi)) {
         await api.addTagliando({
           veicoloId,
           tipo: tipoIntervento || CATEGORIA_TIPO_MAP[categoria] || 'Altro',
-          data,
-          km,
+          data: soloReminder ? '' : data,
+          km: soloReminder ? '' : km,
           dataProssima,
           kmProssimi,
           nota,
-          importo,
+          importo: soloReminder ? '' : importo,
         })
         await refreshTagliandi()
       }
-      await refreshCosti()
+      if (!soloReminder) await refreshCosti()
       setSuccess(true)
       setImporto('')
       setNota('')
