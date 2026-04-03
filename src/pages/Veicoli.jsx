@@ -77,12 +77,12 @@ function VeicoloForm({ onSave, onCancel }) {
           <input type="text" placeholder="AB123CD" value={targa} onChange={e => setTarga(e.target.value.toUpperCase())}
             className="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2.5 text-white text-sm" />
         </div>
-        <div>
-          <label className="text-xs text-slate-400 mb-1 block">Data immatricolazione</label>
+        <div className="min-w-0">
+          <label className="text-xs text-slate-400 mb-1 block">Immatricolazione</label>
           <input type="date" value={dataImmatricolazione} onChange={e => setDataImmatricolazione(e.target.value)}
-            className="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2.5 text-white text-sm" />
+            className="w-full min-w-0 bg-slate-700 border border-slate-600 rounded-xl px-3 py-2.5 text-white text-sm" />
         </div>
-        <div>
+        <div className="min-w-0">
           <label className="text-xs text-slate-400 mb-1 block">KM attuali</label>
           <input type="number" placeholder="0" value={kmAttuali} onChange={e => setKmAttuali(e.target.value)}
             className="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2.5 text-white text-sm" />
