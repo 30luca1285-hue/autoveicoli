@@ -7,7 +7,7 @@ export const CATEGORIE = [
   { id: 'bollo', label: 'Bollo', emoji: '📜', soloMotorizzati: false },
   { id: 'revisione', label: 'Revisione', emoji: '✅', soloMotorizzati: false },
   { id: 'pneumatici', label: 'Pneumatici', emoji: '🔄', soloMotorizzati: false },
-  { id: 'altro', label: 'Altro', emoji: '📦', soloMotorizzati: false },
+  { id: 'carburante', label: 'Carburante', emoji: '⛽', soloMotorizzati: false },
 ]
 
 export const TIPI_VEICOLO = [
