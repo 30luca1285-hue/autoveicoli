@@ -29,6 +29,7 @@ export default function AddCosto() {
   const [importo, setImporto] = useState('')
   const [nota, setNota] = useState('')
   const [km, setKm] = useState('')
+  const [litri, setLitri] = useState('')
 
   // Reminder
   const [hasReminder, setHasReminder] = useState(false)
@@ -53,7 +54,7 @@ export default function AddCosto() {
       setError('Seleziona un veicolo')
       return
     }
-    if (!soloReminder && (!categoria || !importo)) {
+    if (!soloReminder && (!categoria || (categoria !== 'carburante' && !importo))) {
       setError('Compila tutti i campi obbligatori')
       return
     }
@@ -61,7 +62,7 @@ export default function AddCosto() {
     setError(null)
     try {
       if (!soloReminder) {
-        await api.addCosto({ veicoloId, data, categoria, importo, nota, km })
+        await api.addCosto({ veicoloId, data, categoria, importo, nota, km, litri })
       }
       if (hasReminder && (dataProssima || kmProssimi)) {
         await api.addTagliando({
@@ -81,6 +82,7 @@ export default function AddCosto() {
       setImporto('')
       setNota('')
       setKm('')
+      setLitri('')
       setHasReminder(false)
       setDataProssima('')
       setKmProssimi('')
@@ -182,9 +184,35 @@ export default function AddCosto() {
           />
         </div>
 
+        {/* Litri + km/lt (solo carburante) */}
+        {categoria === 'carburante' && (
+          <div className="space-y-2">
+            <div>
+              <label className="text-xs text-slate-400 font-medium mb-1 block">Litri</label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="es. 40"
+                value={litri}
+                onChange={e => setLitri(e.target.value)}
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-white text-sm"
+              />
+            </div>
+            {km && litri && Number(litri) > 0 && (
+              <div className="bg-blue-900/30 border border-blue-700/50 rounded-xl px-3 py-2 text-center">
+                <p className="text-lg font-bold text-blue-300">
+                  {(Number(km) / Number(litri)).toFixed(2)} <span className="text-sm font-normal">km/lt</span>
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Importo */}
         <div>
-          <label className="text-xs text-slate-400 font-medium mb-1 block">Importo € *</label>
+          <label className="text-xs text-slate-400 font-medium mb-1 block">
+            Importo €{categoria === 'carburante' ? ' (opzionale)' : ' *'}
+          </label>
           <input
             type="number"
             step="0.01"
