@@ -201,6 +201,19 @@ function VeicoloEdit({ veicolo, onSave, onCancel }) {
             className="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2 text-white text-sm" />
         </div>
       </div>
+      <div>
+        <label className="text-xs text-slate-400 mb-1 block">Tipo</label>
+        <div className="grid grid-cols-3 gap-2">
+          {TIPI_VEICOLO.map(t => (
+            <button key={t.id} type="button" onClick={() => { setTipo(t.id); if (!t.motorizzato) setCarburante('') }}
+              className={`p-2 rounded-xl border text-center transition-colors ${
+                tipo === t.id ? 'border-blue-500 bg-blue-900/30 text-white' : 'border-slate-600 bg-slate-700 text-slate-300'}`}>
+              <span className="text-xl block">{t.emoji}</span>
+              <span className="text-xs block mt-0.5 leading-tight">{t.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       {isMotorizzato && (
         <div>
           <label className="text-xs text-slate-400 mb-1 block">Carburante</label>
@@ -484,6 +497,52 @@ function CostoEditRow({ c, tagliando, onSave, onCancel }) {
   )
 }
 
+function CalcolatoreConsumi() {
+  const [km, setKm] = useState('')
+  const [litri, setLitri] = useState('')
+
+  const kmLt = km && litri && Number(litri) > 0
+    ? (Number(km) / Number(litri)).toFixed(2)
+    : null
+
+  return (
+    <div className="bg-slate-700/50 rounded-xl p-3 space-y-2">
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Calcolo consumi</p>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="text-xs text-slate-400 mb-0.5 block">KM percorsi</label>
+          <input
+            type="number"
+            placeholder="es. 450"
+            value={km}
+            onChange={e => setKm(e.target.value)}
+            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 mb-0.5 block">Litri</label>
+          <input
+            type="number"
+            placeholder="es. 40"
+            value={litri}
+            onChange={e => setLitri(e.target.value)}
+            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm"
+          />
+        </div>
+      </div>
+      <div className={`rounded-lg px-3 py-2 text-center transition-colors ${kmLt ? 'bg-blue-900/40 border border-blue-700/50' : 'bg-slate-700/50'}`}>
+        {kmLt ? (
+          <>
+            <p className="text-xl font-bold text-blue-300">{kmLt} <span className="text-sm font-normal">km/lt</span></p>
+          </>
+        ) : (
+          <p className="text-xs text-slate-500">Inserisci km e litri</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Veicoli() {
   const { veicoli, setVeicoli, costi, tagliandi, refreshVeicoli, refreshCosti, refreshTagliandi } = useApp()
   const [showForm, setShowForm] = useState(false)
@@ -652,6 +711,11 @@ export default function Veicoli() {
                           </div>
                         )}
                       </div>
+
+                      {/* Calcolatore consumi */}
+                      {TIPI_VEICOLO.find(t => t.id === v.tipo)?.motorizzato !== false && (
+                        <CalcolatoreConsumi />
+                      )}
 
                       {/* Sezione Interventi (da costi, escluso carburante) */}
                       {(() => {
