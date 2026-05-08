@@ -56,12 +56,12 @@ export default function Dashboard() {
   })
   const totaleMese = costiMese.reduce((s, c) => s + Number(c.importo), 0)
 
-  // Per ogni (veicoloId, tipo) tieni solo il record più recente (per data intervento)
+  // Per ogni (veicoloId, tipo) tieni solo il record con dataProssima più lontana nel futuro
   const tagliandiFiltrati = Object.values(
     tagliandi.reduce((map, t) => {
+      if (!t.dataProssima) return map
       const key = `${t.veicoloId}__${t.tipo}`
-      const dataT = new Date(t.data || t.createdAt || 0)
-      if (!map[key] || dataT > new Date(map[key].data || map[key].createdAt || 0)) {
+      if (!map[key] || parseISO(t.dataProssima) > parseISO(map[key].dataProssima)) {
         map[key] = t
       }
       return map
