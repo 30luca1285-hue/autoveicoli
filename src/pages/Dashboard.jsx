@@ -56,15 +56,27 @@ export default function Dashboard() {
   })
   const totaleMese = costiMese.reduce((s, c) => s + Number(c.importo), 0)
 
+  // Per ogni (veicoloId, tipo) tieni solo il record più recente (per data intervento)
+  const tagliandiFiltrati = Object.values(
+    tagliandi.reduce((map, t) => {
+      const key = `${t.veicoloId}__${t.tipo}`
+      const dataT = new Date(t.data || t.createdAt || 0)
+      if (!map[key] || dataT > new Date(map[key].data || map[key].createdAt || 0)) {
+        map[key] = t
+      }
+      return map
+    }, {})
+  )
+
   // Scadenze prossime (30 giorni)
   const oggi = new Date()
   const fra30 = addDays(oggi, 30)
-  const scadenzeVicine = tagliandi.filter(t => {
+  const scadenzeVicine = tagliandiFiltrati.filter(t => {
     if (!t.dataProssima) return false
     const d = parseISO(t.dataProssima)
     return !isBefore(d, oggi) && !isAfter(d, fra30)
   })
-  const scadenzeScadute = tagliandi.filter(t => {
+  const scadenzeScadute = tagliandiFiltrati.filter(t => {
     if (!t.dataProssima) return false
     return isBefore(parseISO(t.dataProssima), oggi)
   })
@@ -148,7 +160,7 @@ export default function Dashboard() {
 
       {/* Prossimi appuntamenti per veicolo */}
       {(() => {
-        const futuri = tagliandi
+        const futuri = tagliandiFiltrati
           .filter(t => t.dataProssima && !isBefore(parseISO(t.dataProssima), oggi))
           .sort((a, b) => parseISO(a.dataProssima) - parseISO(b.dataProssima))
 

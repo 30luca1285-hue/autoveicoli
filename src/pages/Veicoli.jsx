@@ -497,51 +497,6 @@ function CostoEditRow({ c, tagliando, onSave, onCancel }) {
   )
 }
 
-function CalcolatoreConsumi() {
-  const [km, setKm] = useState('')
-  const [litri, setLitri] = useState('')
-
-  const kmLt = km && litri && Number(litri) > 0
-    ? (Number(km) / Number(litri)).toFixed(2)
-    : null
-
-  return (
-    <div className="bg-slate-700/50 rounded-xl p-3 space-y-2">
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Calcolo consumi</p>
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-xs text-slate-400 mb-0.5 block">KM percorsi</label>
-          <input
-            type="number"
-            placeholder="es. 450"
-            value={km}
-            onChange={e => setKm(e.target.value)}
-            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-slate-400 mb-0.5 block">Litri</label>
-          <input
-            type="number"
-            placeholder="es. 40"
-            value={litri}
-            onChange={e => setLitri(e.target.value)}
-            className="w-full bg-slate-700 border border-slate-600 rounded-lg px-2 py-1.5 text-white text-sm"
-          />
-        </div>
-      </div>
-      <div className={`rounded-lg px-3 py-2 text-center transition-colors ${kmLt ? 'bg-blue-900/40 border border-blue-700/50' : 'bg-slate-700/50'}`}>
-        {kmLt ? (
-          <>
-            <p className="text-xl font-bold text-blue-300">{kmLt} <span className="text-sm font-normal">km/lt</span></p>
-          </>
-        ) : (
-          <p className="text-xs text-slate-500">Inserisci km e litri</p>
-        )}
-      </div>
-    </div>
-  )
-}
 
 export default function Veicoli() {
   const { veicoli, setVeicoli, costi, tagliandi, refreshVeicoli, refreshCosti, refreshTagliandi } = useApp()
@@ -712,11 +667,6 @@ export default function Veicoli() {
                         )}
                       </div>
 
-                      {/* Calcolatore consumi */}
-                      {TIPI_VEICOLO.find(t => t.id === v.tipo)?.motorizzato !== false && (
-                        <CalcolatoreConsumi />
-                      )}
-
                       {/* Sezione Interventi (da costi, escluso carburante) */}
                       {(() => {
                         const catIds = new Set(CATEGORIE.map(c => c.id))
@@ -724,6 +674,10 @@ export default function Veicoli() {
                           .filter(c => String(c.veicoloId) === String(v.id) && catIds.has(c.categoria))
                           .sort((a, b) => b.data.localeCompare(a.data))
                         if (vCosti.length === 0) return null
+                        // Lista ordinata per data dei soli rifornimenti (per calcolo km/lt)
+                        const rifornimenti = vCosti
+                          .filter(c => c.categoria === 'carburante')
+                          .sort((a, b) => a.data.localeCompare(b.data))
                         const LIMIT = 3
                         const isExp = expandedInterventi[v.id]
                         const shown = isExp ? vCosti : vCosti.slice(0, LIMIT)
@@ -745,6 +699,20 @@ export default function Veicoli() {
                                 )
                               }
                               const catObj = CATEGORIE.find(cat => cat.id === c.categoria)
+                              // Calcolo km/lt per rifornimenti carburante
+                              let kmLt = null
+                              if (c.categoria === 'carburante' && c.km && c.litri && Number(c.litri) > 0) {
+                                const idx = rifornimenti.findIndex(r => r.id === c.id)
+                                if (idx > 0) {
+                                  const prev = rifornimenti[idx - 1]
+                                  if (prev.km) {
+                                    const kmPercorsi = Number(c.km) - Number(prev.km)
+                                    if (kmPercorsi > 0) {
+                                      kmLt = (kmPercorsi / Number(c.litri)).toFixed(2)
+                                    }
+                                  }
+                                }
+                              }
                               return (
                                 <div key={c.id} className="rounded-xl p-2.5 flex items-start justify-between gap-2 bg-slate-700">
                                   <div className="min-w-0 flex-1">
@@ -754,6 +722,7 @@ export default function Veicoli() {
                                     {c.data && <p className="text-xs text-slate-400 mt-0.5">{fmtDate(c.data)}</p>}
                                     {c.km && <p className="text-xs text-slate-500">KM: {Number(c.km).toLocaleString('it-IT')}</p>}
                                     <p className="text-xs text-slate-400 font-medium mt-0.5">€ {c.importo ? Number(c.importo).toFixed(2) : '—'}</p>
+                                    {kmLt && <p className="text-xs text-blue-400 font-semibold mt-0.5">{kmLt} km/lt</p>}
                                     {c.nota && <p className="text-xs text-slate-500 italic">{c.nota}</p>}
                                   </div>
                                   <div className="flex gap-1 shrink-0">
