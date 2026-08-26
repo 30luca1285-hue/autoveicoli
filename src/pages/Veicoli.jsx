@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { TIPI_VEICOLO, CARBURANTI, INTERVALLI_REVISIONE, CATEGORIE, TIPI_INTERVENTO } from '../config'
+import { reminderAttivi } from '../services/reminder'
 
 function fmtDate(s) {
   if (!s) return '—'
@@ -530,6 +531,9 @@ export default function Veicoli() {
     try {
       await api.deleteVeicolo(id)
       await Promise.all([refreshVeicoli(), refreshCosti(), refreshTagliandi()])
+    } catch (e) {
+      // prima falliva in silenzio: il veicolo restava in elenco e non si capiva perché
+      alert(`Non sono riuscito a eliminare il veicolo (${e.message}).\nControlla la connessione e riprova.`)
     } finally {
       setDeleting(null)
     }
@@ -546,6 +550,8 @@ export default function Veicoli() {
     try {
       await api.deleteCosto(id)
       await refreshCosti()
+    } catch (e) {
+      alert(`Non sono riuscito a eliminare la spesa (${e.message}).\nControlla la connessione e riprova.`)
     } finally {
       setDeletingCostoId(null)
     }
@@ -557,6 +563,8 @@ export default function Veicoli() {
     try {
       await api.deleteTagliando(id)
       await refreshTagliandi()
+    } catch (e) {
+      alert(`Non sono riuscito a eliminare il promemoria (${e.message}).\nControlla la connessione e riprova.`)
     } finally {
       setDeletingTagliandoId(null)
     }
@@ -752,8 +760,8 @@ export default function Veicoli() {
 
                       {/* Sezione Reminder */}
                       {(() => {
-                        const vReminder = tagliandi
-                          .filter(t => String(t.veicoloId) === String(v.id) && t.dataProssima)
+                        const vReminder = reminderAttivi(tagliandi)
+                          .filter(t => String(t.veicoloId) === String(v.id))
                           .sort((a, b) => a.dataProssima.localeCompare(b.dataProssima))
                         const LIMIT = 3
                         const isExp = expandedReminder[v.id]

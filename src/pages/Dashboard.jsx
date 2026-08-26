@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { CATEGORIE, TIPI_VEICOLO } from '../config'
+import { reminderAttivi } from '../services/reminder'
 import { format, isAfter, isBefore, addDays, parseISO, differenceInDays } from 'date-fns'
 import { it } from 'date-fns/locale'
 import { AlertTriangle, Car, RefreshCw, CalendarClock, ChevronDown } from 'lucide-react'
@@ -56,17 +57,9 @@ export default function Dashboard() {
   })
   const totaleMese = costiMese.reduce((s, c) => s + Number(c.importo), 0)
 
-  // Per ogni (veicoloId, tipo) tieni solo il record con dataProssima più lontana nel futuro
-  const tagliandiFiltrati = Object.values(
-    tagliandi.reduce((map, t) => {
-      if (!t.dataProssima) return map
-      const key = `${t.veicoloId}__${t.tipo}`
-      if (!map[key] || parseISO(t.dataProssima) > parseISO(map[key].dataProssima)) {
-        map[key] = t
-      }
-      return map
-    }, {})
-  )
+  // Un promemoria scaduto si nasconde solo se lo stesso tipo ne ha già uno valido
+  // (= l'intervento è stato rifatto). Vedi services/reminder.js per il perché.
+  const tagliandiFiltrati = reminderAttivi(tagliandi)
 
   // Scadenze prossime (30 giorni)
   const oggi = new Date()
