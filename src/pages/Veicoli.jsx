@@ -679,9 +679,13 @@ export default function Veicoli() {
 
                       {/* Sezione Interventi (da costi, escluso carburante) */}
                       {(() => {
-                        const catIds = new Set(CATEGORIE.map(c => c.id))
+                        // ⚠️ 08/09/2026 — prima qui c'era `catIds.has(c.categoria)`: una spesa con
+                        // categoria non presente in CATEGORIE spariva dall'elenco SENZA errore.
+                        // È bastato aggiungere «lavaggio» perché i 10 € della Born non si vedessero
+                        // sui telefoni con la versione in cache. Il denaro speso non deve mai
+                        // scomparire da una schermata: basta che la categoria sia valorizzata.
                         const vCosti = costi
-                          .filter(c => String(c.veicoloId) === String(v.id) && catIds.has(c.categoria))
+                          .filter(c => String(c.veicoloId) === String(v.id) && String(c.categoria || '').trim())
                           .sort((a, b) => b.data.localeCompare(a.data))
                         if (vCosti.length === 0) return null
                         // Lista ordinata per data dei soli rifornimenti (per calcolo km/lt)
