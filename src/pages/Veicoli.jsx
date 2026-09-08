@@ -434,9 +434,11 @@ function CostoEditRow({ c, tagliando, onSave, onCancel }) {
       <div>
         <label className="text-xs text-slate-400 mb-0.5 block">Categoria</label>
         <div className="grid grid-cols-3 gap-1">
-          {CATEGORIE.map(cat => (
+          {CATEGORIE.map((cat, i) => (
             <button key={cat.id} type="button" onClick={() => setCategoria(cat.id)}
               className={`py-1 px-1 rounded-lg border text-xs text-center transition-colors ${
+                CATEGORIE.length % 3 === 1 && i === CATEGORIE.length - 1 ? 'col-span-3 ' : ''
+              }${
                 categoria === cat.id ? 'border-blue-500 bg-blue-900/30 text-white' : 'border-slate-600 bg-slate-600 text-slate-300'
               }`}>
               {cat.emoji} {cat.label}

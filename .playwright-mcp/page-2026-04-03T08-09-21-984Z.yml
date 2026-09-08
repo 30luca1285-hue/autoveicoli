@@ -1,0 +1,67 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - heading "Impostazioni" [level=1] [ref=e5]
+    - generic [ref=e6]:
+      - paragraph [ref=e7]: Backend Google Apps Script
+      - paragraph [ref=e8]: Incolla qui l'URL del Web App dopo aver deployato lo script su Google Apps Script.
+      - textbox "https://script.google.com/macros/s/.../exec" [ref=e9]
+      - button "Salva URL" [disabled] [ref=e10]:
+        - img [ref=e11]
+        - text: Salva URL
+    - generic [ref=e15]:
+      - paragraph [ref=e16]: Notifiche Telegram
+      - paragraph [ref=e17]: Ricevi un messaggio Telegram il 1° di ogni mese con le scadenze imminenti. Crea un bot con @BotFather, poi ottieni il tuo Chat ID con @userinfobot.
+      - textbox "Bot Token (es. 123456:ABC-DEF...)" [ref=e18]
+      - textbox "Chat ID (es. 123456789)" [ref=e19]
+      - generic [ref=e20]:
+        - button "Salva" [disabled] [ref=e21]:
+          - img [ref=e22]
+          - text: Salva
+        - button "Test" [disabled] [ref=e26]:
+          - img [ref=e27]
+          - text: Test
+    - generic [ref=e30]:
+      - paragraph [ref=e31]: Come configurare il backend
+      - list [ref=e32]:
+        - listitem [ref=e33]: Crea un nuovo Google Sheet
+        - listitem [ref=e34]:
+          - text: Dal menu →
+          - strong [ref=e35]: Estensioni → Apps Script
+        - listitem [ref=e36]:
+          - text: Incolla il codice del file
+          - code [ref=e37]: backend/Code.gs
+        - listitem [ref=e38]:
+          - text: Salva e clicca
+          - strong [ref=e39]: Deploy → Nuovo deployment
+        - listitem [ref=e40]:
+          - text: "Tipo:"
+          - strong [ref=e41]: App Web
+          - text: ", accesso:"
+          - strong [ref=e42]: Chiunque
+        - listitem [ref=e43]: Copia l'URL e incollalo qui sopra
+    - generic [ref=e44]:
+      - paragraph [ref=e45]: Informazioni
+      - paragraph [ref=e46]: Autoveicoli v0.6.1
+      - paragraph [ref=e47]: Gestione costi e manutenzione veicoli
+  - navigation [ref=e48]:
+    - generic [ref=e49]:
+      - link "Home" [ref=e50] [cursor=pointer]:
+        - /url: /autoveicoli
+        - img [ref=e51]
+        - generic [ref=e54]: Home
+      - link "Aggiungi" [ref=e55] [cursor=pointer]:
+        - /url: /autoveicoli/aggiungi
+        - img [ref=e56]
+        - generic [ref=e58]: Aggiungi
+      - link "Riepilogo" [ref=e59] [cursor=pointer]:
+        - /url: /autoveicoli/riepilogo
+        - img [ref=e60]
+        - generic [ref=e61]: Riepilogo
+      - link "Veicoli" [ref=e62] [cursor=pointer]:
+        - /url: /autoveicoli/veicoli
+        - img [ref=e63]
+        - generic [ref=e67]: Veicoli
+      - link "Config" [ref=e68] [cursor=pointer]:
+        - /url: /autoveicoli/impostazioni
+        - img [ref=e69]
+        - generic [ref=e72]: Config

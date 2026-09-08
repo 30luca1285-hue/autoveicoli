@@ -8,6 +8,10 @@ import { CheckCircle, Loader2 } from 'lucide-react'
 // Tutte le categorie tranne "altro" supportano il reminder
 const CATEGORIE_CON_REMINDER = ['manutenzione', 'assicurazione', 'bollo', 'revisione', 'pneumatici']
 
+// La griglia è a 3 colonne: se le categorie sono 7 (o 10, 13…) l'ultima resterebbe
+// da sola con due buchi accanto. In quel caso la si allarga a tutta la riga.
+const ULTIMA_A_TUTTA_RIGA = CATEGORIE.length % 3 === 1
+
 // Tipo intervento suggerito in base alla categoria
 const CATEGORIA_TIPO_MAP = {
   manutenzione: 'Tagliando ordinario',
@@ -142,12 +146,14 @@ export default function AddCosto() {
           <div>
             <label className="text-xs text-slate-400 font-medium mb-1 block">Categoria *</label>
             <div className="grid grid-cols-3 gap-2">
-              {CATEGORIE.map(c => (
+              {CATEGORIE.map((c, i) => (
                 <button
                   key={c.id}
                   type="button"
                   onClick={() => handleSelectCategoria(c.id)}
                   className={`p-2 rounded-xl border text-center transition-colors ${
+                    ULTIMA_A_TUTTA_RIGA && i === CATEGORIE.length - 1 ? 'col-span-3 ' : ''
+                  }${
                     categoria === c.id
                       ? 'border-blue-500 bg-blue-900/30 text-white'
                       : 'border-slate-700 bg-slate-800 text-slate-300'

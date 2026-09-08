@@ -1,0 +1,4 @@
+[    1193ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://30luca1285-hue.github.io/favicon.ico:0
+[    1278ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ https://30luca1285-hue.github.io/autoveicoli/:0
+[    1602ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://30luca1285-hue.github.io/autoveicoli/icon-192.png:0
+[    1602ms] [WARNING] Error while trying to use the following icon from the Manifest: https://30luca1285-hue.github.io/autoveicoli/icon-192.png (Download error or resource isn't a valid image) @ https://30luca1285-hue.github.io/autoveicoli/:0

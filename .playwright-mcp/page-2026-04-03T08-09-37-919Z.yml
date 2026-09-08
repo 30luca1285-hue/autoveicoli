@@ -1,0 +1,40 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - heading "Inserisci" [level=1] [ref=e5]
+    - generic [ref=e6]:
+      - generic [ref=e8]: Veicolo *
+      - generic [ref=e9]:
+        - generic [ref=e10]: Data effettuato
+        - textbox [ref=e11]: 2026-04-03
+      - generic [ref=e12]:
+        - generic [ref=e13]: KM attuali
+        - spinbutton [ref=e14]
+      - generic [ref=e15]:
+        - generic [ref=e16]: Importo € *
+        - spinbutton [ref=e17]
+      - generic [ref=e18]:
+        - generic [ref=e19]: Nota (opzionale)
+        - textbox "Descrizione..." [ref=e20]
+      - button "Salva" [ref=e21] [cursor=pointer]
+  - navigation [ref=e22]:
+    - generic [ref=e23]:
+      - link "Home" [ref=e24] [cursor=pointer]:
+        - /url: /autoveicoli
+        - img [ref=e25]
+        - generic [ref=e28]: Home
+      - link "Aggiungi" [ref=e29] [cursor=pointer]:
+        - /url: /autoveicoli/aggiungi
+        - img [ref=e30]
+        - generic [ref=e32]: Aggiungi
+      - link "Riepilogo" [ref=e33] [cursor=pointer]:
+        - /url: /autoveicoli/riepilogo
+        - img [ref=e34]
+        - generic [ref=e35]: Riepilogo
+      - link "Veicoli" [ref=e36] [cursor=pointer]:
+        - /url: /autoveicoli/veicoli
+        - img [ref=e37]
+        - generic [ref=e41]: Veicoli
+      - link "Config" [ref=e42] [cursor=pointer]:
+        - /url: /autoveicoli/impostazioni
+        - img [ref=e43]
+        - generic [ref=e46]: Config

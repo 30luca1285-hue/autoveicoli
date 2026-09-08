@@ -276,8 +276,25 @@ function checkScadenzeMensili() {
   const scadute = []
   const questoMese = []
 
+  // ⚠️ Per ogni veicolo+tipo conta SOLO la scadenza più avanti nel tempo.
+  // Prima si scorrevano tutti i tagliandi: un intervento vecchio con dataProssima passata
+  // restava "già scaduto" per sempre, anche dopo che quella revisione era stata rifatta e
+  // registrata con una scadenza nuova. Il 01/09/2026 il messaggio segnalava 4 scadenze su 6
+  // che erano già state fatte — Talento (rifatta 08/05), Carrello (01/07), bollo Hymer
+  // (25/06), Doblò "Altro" (24/10/2025) — e Luca lo segnalava come «il solito errore mai
+  // risolto»: era stato corretto il dato nell'app, ma il messaggio continuava a leggere
+  // anche le righe superate.
+  const piuRecente = {}
   tagliandi.forEach(t => {
     if (!t.dataProssima) return
+    const k = t.veicoloId + '|' + t.tipo
+    // date in formato YYYY-MM-DD: il confronto fra stringhe è già cronologico
+    if (!piuRecente[k] || String(t.dataProssima) > String(piuRecente[k].dataProssima)) {
+      piuRecente[k] = t
+    }
+  })
+
+  Object.keys(piuRecente).map(k => piuRecente[k]).forEach(t => {
     const d = new Date(t.dataProssima)
     const v = veicoli.find(v => v.id === t.veicoloId)
     const nome = v ? v.nome + (v.targa ? ' (' + v.targa + ')' : '') : 'Veicolo sconosciuto'

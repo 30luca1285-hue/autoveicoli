@@ -1,0 +1,28 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - img [ref=e5]
+    - heading "Autoveicoli" [level=1] [ref=e9]
+    - paragraph [ref=e10]: Per iniziare devi configurare l'URL del backend Google Apps Script.
+    - button "Vai alle Impostazioni" [ref=e11] [cursor=pointer]
+  - navigation [ref=e12]:
+    - generic [ref=e13]:
+      - link "Home" [ref=e14] [cursor=pointer]:
+        - /url: /autoveicoli
+        - img [ref=e15]
+        - generic [ref=e18]: Home
+      - link "Aggiungi" [ref=e19] [cursor=pointer]:
+        - /url: /autoveicoli/aggiungi
+        - img [ref=e20]
+        - generic [ref=e22]: Aggiungi
+      - link "Riepilogo" [ref=e23] [cursor=pointer]:
+        - /url: /autoveicoli/riepilogo
+        - img [ref=e24]
+        - generic [ref=e25]: Riepilogo
+      - link "Veicoli" [ref=e26] [cursor=pointer]:
+        - /url: /autoveicoli/veicoli
+        - img [ref=e27]
+        - generic [ref=e31]: Veicoli
+      - link "Config" [ref=e32] [cursor=pointer]:
+        - /url: /autoveicoli/impostazioni
+        - img [ref=e33]
+        - generic [ref=e36]: Config
