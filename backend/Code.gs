@@ -284,10 +284,18 @@ function checkScadenzeMensili() {
   // (25/06), Doblò "Altro" (24/10/2025) — e Luca lo segnalava come «il solito errore mai
   // risolto»: era stato corretto il dato nell'app, ma il messaggio continuava a leggere
   // anche le righe superate.
+  // ⛔ 15/09/2026 — IL COLLASSO NON VALE PER IL TIPO «Altro».
+  // «Altro» è un contenitore, non un intervento: il Doblò ci tiene DUE promemoria diversi,
+  // le bombole metano FABER (30/09/2026) e il bollo (24/10/2026). Tenendo solo la data più
+  // avanti, il bollo copriva le bombole — che così non sono mai state annunciate, e dal 01/10
+  // sarebbero sparite per sempre risultando «già scadute». Stessa regola del frontend
+  // (`src/services/reminder.js` v0.7.0): per i tipi unici vale l'ultima, «Altro» si tiene tutto.
   const piuRecente = {}
   tagliandi.forEach(t => {
     if (!t.dataProssima) return
-    const k = t.veicoloId + '|' + t.tipo
+    const k = t.tipo === 'Altro'
+      ? t.veicoloId + '|Altro|' + (t.nota || t.id)      // ogni «Altro» fa storia a sé
+      : t.veicoloId + '|' + t.tipo
     // date in formato YYYY-MM-DD: il confronto fra stringhe è già cronologico
     if (!piuRecente[k] || String(t.dataProssima) > String(piuRecente[k].dataProssima)) {
       piuRecente[k] = t
