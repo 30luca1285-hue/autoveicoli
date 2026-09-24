@@ -1,5 +1,7 @@
-// Incolla qui l'URL del tuo Google Apps Script Web App dopo il deploy
-export const APPS_SCRIPT_URL = 'INSERISCI_QUI_URL_APPS_SCRIPT'
+// URL del motore Google (deployment @31). Dal 24/09/2026 sta qui e non più solo nelle Impostazioni del
+// telefono: il motore risponde soltanto col PIN, quindi l'indirizzo da solo non apre niente, e così una
+// reinstallazione dell'app funziona chiedendo solo il PIN. (Le Impostazioni possono ancora sovrascriverlo.)
+export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzH6xpACTJSY2p72HYtVSE-ttd5dcR9J4x-pd8zTxOg66BVjCjKjct-YIfdJnpo92Gy7g/exec'
 
 export const CATEGORIE = [
   { id: 'manutenzione', label: 'Manutenzione', emoji: '🔧', soloMotorizzati: false },
