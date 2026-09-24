@@ -371,10 +371,23 @@ function migrateVeicoli() {
   return { ok: true, message: 'Migrazione completata: aggiunte 4 colonne' }
 }
 
+// ── Accesso (24/09/2026) ───────────────────────────────────────────────────
+// L'URL /exec sta nel repo PUBBLICO dell'app: senza un segreto chiunque poteva leggere e modificare
+// veicoli, costi e perfino la configurazione Telegram. Il PIN vive nelle Script Properties (APP_PIN),
+// mai nel codice (che è pubblico). Le funzioni lanciate dai trigger non passano di qui: non cambiano.
+
+function pinValido_(pin) {
+  const atteso = PropertiesService.getScriptProperties().getProperty('APP_PIN')
+  return !!atteso && String(pin || '') === atteso
+}
+
+const PIN_RIFIUTATO = { error: 'PIN non valido', pinRichiesto: true }
+
 // ── Router GET ─────────────────────────────────────────────────────────────
 
 function doGet(e) {
   try {
+    if (!pinValido_(e.parameter.pin)) return corsResponse(PIN_RIFIUTATO)
     const action = e.parameter.action
     let result
     switch (action) {
@@ -397,6 +410,7 @@ function doGet(e) {
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents)
+    if (!pinValido_(body.pin)) return corsResponse(PIN_RIFIUTATO)
     const action = body.action
     let result
     switch (action) {

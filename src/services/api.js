@@ -36,15 +36,35 @@ async function leggiJson(res) {
   }
 }
 
-async function call(params, tentativi = TENTATIVI_LETTURA) {
+/**
+ * ⚠️ 24/09/2026 — PIN. L'indirizzo del motore Google sta nel repo PUBBLICO dell'app: senza un segreto
+ * chiunque poteva leggere e modificare veicoli, costi e perfino la configurazione Telegram. Il PIN NON
+ * sta nel codice (che è pubblico): lo chiede l'app la prima volta e resta su questo telefono.
+ * Se il motore risponde { pinRichiesto: true } (PIN assente o sbagliato) lo si richiede e si riprova
+ * UNA volta: una richiesta respinta per il PIN non ha scritto niente, quindi riprovarla non crea doppioni.
+ */
+function leggiPin(nuovo = false) {
+  if (nuovo) localStorage.removeItem('appPin')
+  let pin = localStorage.getItem('appPin') || ''
+  if (!pin) {
+    pin = (window.prompt(nuovo ? 'PIN non valido. Inserisci il PIN di Autoveicoli:' : 'Inserisci il PIN di Autoveicoli:') || '').trim()
+    if (pin) localStorage.setItem('appPin', pin)
+  }
+  return pin
+}
+const pinRifiutato = dati => !!(dati && dati.pinRichiesto)
+
+async function call(params, tentativi = TENTATIVI_LETTURA, pinNuovo = false) {
   const url = new URL(getUrl())
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
+  Object.entries({ ...params, pin: leggiPin(pinNuovo) }).forEach(([k, v]) => url.searchParams.set(k, v))
   let ultimo
   for (let i = 0; i < tentativi; i++) {
     try {
       const res = await fetch(url.toString(), { signal: AbortSignal.timeout(TIMEOUT) })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return await leggiJson(res)
+      const dati = await leggiJson(res)
+      if (pinRifiutato(dati) && !pinNuovo) return call(params, tentativi, true)
+      return dati
     } catch (e) {
       ultimo = e
     }
@@ -71,15 +91,17 @@ const CONFERMA = {
   },
 }
 
-async function post(body) {
+async function post(body, pinNuovo = false) {
   try {
     const res = await fetch(getUrl(), {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, pin: leggiPin(pinNuovo) }),
       signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    return await leggiJson(res)
+    const dati = await leggiJson(res)
+    if (pinRifiutato(dati) && !pinNuovo) return post(body, true)
+    return dati
   } catch (errore) {
     const conferma = CONFERMA[body.action]
     if (!conferma) throw errore
