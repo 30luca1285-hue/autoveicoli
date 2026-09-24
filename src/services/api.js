@@ -42,34 +42,53 @@ async function leggiJson(res) {
  * sta nel codice (che è pubblico): lo chiede l'app la prima volta e resta su questo telefono.
  * Se il motore risponde { pinRichiesto: true } (PIN assente o sbagliato) lo si richiede e si riprova
  * UNA volta: una richiesta respinta per il PIN non ha scritto niente, quindi riprovarla non crea doppioni.
+ *
+ * ⚠️ 24/09/2026, correzione v0.7.4: all'avvio partono TRE letture insieme (veicoli, costi, tagliandi).
+ * Con un PIN sbagliato in memoria venivano respinte tutte e tre e l'app chiedeva il PIN tre volte; se
+ * una finestrella veniva chiusa, l'oggetto d'errore arrivava alla pagina al posto della lista e l'app
+ * restava tutta blu (`t.filter is not a function`). Ora:
+ *  · si passa il PIN RESPINTO: se nel frattempo qualcuno l'ha già reinserito, si usa quello nuovo
+ *    senza chiedere di nuovo → una sola richiesta anche con tre letture;
+ *  · se l'utente annulla, non si richiede più fino alla riapertura dell'app;
+ *  · un PIN respinto diventa un ERRORE lanciato (con messaggio), mai un oggetto restituito alla pagina.
  */
-function leggiPin(nuovo = false) {
-  if (nuovo) localStorage.removeItem('appPin')
+let pinAnnullato = false
+
+function leggiPin(respinto = null) {
   let pin = localStorage.getItem('appPin') || ''
-  if (!pin) {
-    pin = (window.prompt(nuovo ? 'PIN non valido. Inserisci il PIN di Autoveicoli:' : 'Inserisci il PIN di Autoveicoli:') || '').trim()
+  if (respinto !== null && pin === respinto) { localStorage.removeItem('appPin'); pin = '' }
+  if (!pin && !pinAnnullato) {
+    const scritto = window.prompt(respinto !== null ? 'PIN non valido. Inserisci il PIN di Autoveicoli:' : 'Inserisci il PIN di Autoveicoli:')
+    pin = (scritto || '').trim()
     if (pin) localStorage.setItem('appPin', pin)
+    else pinAnnullato = true
   }
   return pin
 }
 const pinRifiutato = dati => !!(dati && dati.pinRichiesto)
+const ERRORE_PIN = 'PIN non valido: chiudi e riapri l\'app per inserirlo di nuovo'
 
-async function call(params, tentativi = TENTATIVI_LETTURA, pinNuovo = false) {
+async function call(params, tentativi = TENTATIVI_LETTURA, respinto = null) {
+  const pin = leggiPin(respinto)
   const url = new URL(getUrl())
-  Object.entries({ ...params, pin: leggiPin(pinNuovo) }).forEach(([k, v]) => url.searchParams.set(k, v))
-  let ultimo
-  for (let i = 0; i < tentativi; i++) {
+  Object.entries({ ...params, pin }).forEach(([k, v]) => url.searchParams.set(k, v))
+  let ultimo, dati, letto = false
+  for (let i = 0; i < tentativi && !letto; i++) {
     try {
       const res = await fetch(url.toString(), { signal: AbortSignal.timeout(TIMEOUT) })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const dati = await leggiJson(res)
-      if (pinRifiutato(dati) && !pinNuovo) return call(params, tentativi, true)
-      return dati
+      dati = await leggiJson(res)
+      letto = true
     } catch (e) {
       ultimo = e
     }
   }
-  throw ultimo
+  if (!letto) throw ultimo
+  if (pinRifiutato(dati)) {
+    if (respinto !== null || !pin) throw new Error(ERRORE_PIN)
+    return call(params, tentativi, pin)
+  }
+  return dati
 }
 
 // come riconoscere, rileggendo, una riga appena scritta: per ogni scrittura i campi che la
@@ -91,17 +110,17 @@ const CONFERMA = {
   },
 }
 
-async function post(body, pinNuovo = false) {
+async function post(body, respinto = null) {
+  const pin = leggiPin(respinto)
+  let dati
   try {
     const res = await fetch(getUrl(), {
       method: 'POST',
-      body: JSON.stringify({ ...body, pin: leggiPin(pinNuovo) }),
+      body: JSON.stringify({ ...body, pin }),
       signal: AbortSignal.timeout(TIMEOUT),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const dati = await leggiJson(res)
-    if (pinRifiutato(dati) && !pinNuovo) return post(body, true)
-    return dati
+    dati = await leggiJson(res)
   } catch (errore) {
     const conferma = CONFERMA[body.action]
     if (!conferma) throw errore
@@ -112,6 +131,11 @@ async function post(body, pinNuovo = false) {
     }
     throw errore
   }
+  if (pinRifiutato(dati)) {
+    if (respinto !== null || !pin) throw new Error(ERRORE_PIN)
+    return post(body, pin)   // respinta per il PIN = niente scritto: riprovare non crea doppioni
+  }
+  return dati
 }
 
 // VEICOLI
