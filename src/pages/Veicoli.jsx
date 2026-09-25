@@ -17,7 +17,6 @@ const CATEGORIA_TIPO_MAP = {
   pneumatici: 'Cambio pneumatici',
   altro: 'Altro',
 }
-import * as api from '../services/api'
 import { addDays, parseISO, isBefore, isAfter } from 'date-fns'
 import { Plus, Trash2, Loader2, X, ChevronDown, Save, Pencil, Bell, Wrench } from 'lucide-react'
 
@@ -30,27 +29,21 @@ function VeicoloForm({ onSave, onCancel }) {
   const [intervaloRevisione, setIntervaloRevisione] = useState('24')
   const [kmAttuali, setKmAttuali] = useState('')
   const [nota, setNota] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [saving] = useState(false)
   const [error, setError] = useState(null)
+  const { scrivi } = useApp()
 
   const isMotorizzato = TIPI_VEICOLO.find(t => t.id === tipo)?.motorizzato ?? true
 
-  async function handleSubmit() {
+  // 25/09/2026 (v0.8.0): come tutte le modifiche di questa pagina, parte in sottofondo (coda di invio)
+  function handleSubmit() {
     if (!nome) {
       setError('Inserisci il nome del veicolo')
       return
     }
-    setSaving(true)
     setError(null)
-    try {
-      const result = await api.addVeicolo({ nome, targa, tipo, dataImmatricolazione, carburante, intervaloRevisione, kmAttuali, nota })
-      if (result.error) throw new Error(result.error)
-      onSave({ id: result.id, nome, targa, tipo, dataImmatricolazione, carburante, intervaloRevisione, kmAttuali, nota })
-    } catch (err) {
-      setError('Errore nel salvataggio: ' + err.message)
-    } finally {
-      setSaving(false)
-    }
+    scrivi('addVeicolo', { nome, targa, tipo, dataImmatricolazione, carburante, intervaloRevisione, kmAttuali, nota })
+    onSave()
   }
 
   return (
@@ -161,19 +154,15 @@ function VeicoloEdit({ veicolo, onSave, onCancel }) {
   const [intervaloRevisione, setIntervaloRevisione] = useState(veicolo.intervaloRevisione || '24')
   const [kmAttuali, setKmAttuali] = useState(veicolo.kmAttuali || '')
   const [nota, setNota] = useState(veicolo.nota || '')
-  const [saving, setSaving] = useState(false)
+  const [saving] = useState(false)
+  const { scrivi } = useApp()
 
   const isMotorizzato = TIPI_VEICOLO.find(t => t.id === tipo)?.motorizzato ?? true
 
-  async function handleSubmit(e) {
+  function handleSubmit(e) {
     e.preventDefault()
-    setSaving(true)
-    try {
-      await api.updateVeicolo({ id: veicolo.id, nome, targa, tipo, dataImmatricolazione, carburante, intervaloRevisione, kmAttuali, nota })
-      onSave()
-    } finally {
-      setSaving(false)
-    }
+    scrivi('updateVeicolo', { id: veicolo.id, nome, targa, tipo, dataImmatricolazione, carburante, intervaloRevisione, kmAttuali, nota })
+    onSave()
   }
 
   return (
@@ -266,17 +255,13 @@ function ReminderAddForm({ veicoloId, onSave, onCancel }) {
   const [dataProssima, setDataProssima] = useState('')
   const [kmProssimi, setKmProssimi] = useState('')
   const [nota, setNota] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [saving] = useState(false)
+  const { scrivi } = useApp()
 
-  async function handleSave() {
+  function handleSave() {
     if (!dataProssima) return
-    setSaving(true)
-    try {
-      await api.addTagliando({ veicoloId, tipo, dataProssima, kmProssimi, nota })
-      onSave()
-    } finally {
-      setSaving(false)
-    }
+    scrivi('addTagliando', { veicoloId, tipo, dataProssima, kmProssimi, nota })
+    onSave()
   }
 
   return (
@@ -328,16 +313,12 @@ function TagliandoEditRow({ t, onSave, onCancel }) {
   const [kmProssimi, setKmProssimi] = useState(t.kmProssimi || '')
   const [importo, setImporto] = useState(t.importo || '')
   const [nota, setNota] = useState(t.nota || '')
-  const [saving, setSaving] = useState(false)
+  const [saving] = useState(false)
+  const { scrivi } = useApp()
 
-  async function handleSave() {
-    setSaving(true)
-    try {
-      await api.updateTagliando({ id: t.id, tipo, data, km, dataProssima, kmProssimi, importo, nota })
-      onSave()
-    } finally {
-      setSaving(false)
-    }
+  function handleSave() {
+    scrivi('updateTagliando', { id: t.id, tipo, data, km, dataProssima, kmProssimi, importo, nota })
+    onSave()
   }
 
   return (
@@ -408,25 +389,21 @@ function CostoEditRow({ c, tagliando, onSave, onCancel }) {
   const [nota, setNota] = useState(c.nota || '')
   const [dataProssima, setDataProssima] = useState(tagliando?.dataProssima || '')
   const [kmProssimi, setKmProssimi] = useState(tagliando?.kmProssimi || '')
-  const [saving, setSaving] = useState(false)
+  const [saving] = useState(false)
+  const { scrivi } = useApp()
 
-  async function handleSave() {
-    setSaving(true)
-    try {
-      await api.updateCosto({ id: c.id, categoria, data, km, importo, nota })
-      if (tagliando) {
-        await api.updateTagliando({ id: tagliando.id, dataProssima, kmProssimi })
-      } else if (dataProssima || kmProssimi) {
-        await api.addTagliando({
-          veicoloId: c.veicoloId,
-          tipo: CATEGORIA_TIPO_MAP[categoria] || 'Altro',
-          data, km, dataProssima, kmProssimi, nota, importo,
-        })
-      }
-      onSave()
-    } finally {
-      setSaving(false)
+  function handleSave() {
+    scrivi('updateCosto', { id: c.id, categoria, data, km, importo, nota })
+    if (tagliando) {
+      scrivi('updateTagliando', { id: tagliando.id, dataProssima, kmProssimi })
+    } else if (dataProssima || kmProssimi) {
+      scrivi('addTagliando', {
+        veicoloId: c.veicoloId,
+        tipo: CATEGORIA_TIPO_MAP[categoria] || 'Altro',
+        data, km, dataProssima, kmProssimi, nota, importo,
+      })
     }
+    onSave()
   }
 
   return (
@@ -502,7 +479,7 @@ function CostoEditRow({ c, tagliando, onSave, onCancel }) {
 
 
 export default function Veicoli() {
-  const { veicoli, setVeicoli, costi, tagliandi, refreshVeicoli, refreshCosti, refreshTagliandi } = useApp()
+  const { veicoli, costi, tagliandi, scrivi } = useApp()
   const [showForm, setShowForm] = useState(false)
   const [expandedId, setExpandedId] = useState(null)
   const [editingId, setEditingId] = useState(null)
@@ -515,70 +492,41 @@ export default function Veicoli() {
   const [expandedReminder, setExpandedReminder] = useState({})
   const [addingReminderId, setAddingReminderId] = useState(null)
 
-  function handleSave(newVeicolo) {
-    if (newVeicolo) {
-      setVeicoli(prev => [...prev, newVeicolo])
-    }
+  // ⚠️ 25/09/2026 (v0.8.0): aggiunte, modifiche e cancellazioni entrano nella coda di invio e si vedono
+  // subito; niente più ricariche da aspettare. Se il Mac non risponde lo dice l'avviso in fondo allo
+  // schermo, e la modifica parte da sola appena torna (services/coda.js).
+  function handleSave() {
     setShowForm(false)
   }
 
-  async function handleUpdate() {
-    await refreshVeicoli()
+  function handleUpdate() {
     setEditingId(null)
   }
 
-  async function handleDelete(id) {
+  function handleDelete(id) {
     if (!confirm('Eliminare questo veicolo? Verranno eliminati anche tutti i costi e tagliandi associati.')) return
-    setDeleting(id)
-    try {
-      await api.deleteVeicolo(id)
-      await Promise.all([refreshVeicoli(), refreshCosti(), refreshTagliandi()])
-    } catch (e) {
-      // prima falliva in silenzio: il veicolo restava in elenco e non si capiva perché
-      alert(`Non sono riuscito a eliminare il veicolo (${e.message}).\nControlla la connessione e riprova.`)
-    } finally {
-      setDeleting(null)
-    }
+    scrivi('deleteVeicolo', { id })
   }
 
-  async function handleUpdateCosto() {
-    await Promise.all([refreshCosti(), refreshTagliandi()])
+  function handleUpdateCosto() {
     setEditingCostoId(null)
   }
 
-  async function handleDeleteCosto(id) {
+  function handleDeleteCosto(id) {
     if (!confirm('Eliminare questa spesa?')) return
-    setDeletingCostoId(id)
-    try {
-      await api.deleteCosto(id)
-      await refreshCosti()
-    } catch (e) {
-      alert(`Non sono riuscito a eliminare la spesa (${e.message}).\nControlla la connessione e riprova.`)
-    } finally {
-      setDeletingCostoId(null)
-    }
+    scrivi('deleteCosto', { id })
   }
 
-  async function handleDeleteTagliando(id) {
+  function handleDeleteTagliando(id) {
     if (!confirm('Eliminare questo reminder/tagliando?')) return
-    setDeletingTagliandoId(id)
-    try {
-      await api.deleteTagliando(id)
-      await refreshTagliandi()
-    } catch (e) {
-      alert(`Non sono riuscito a eliminare il promemoria (${e.message}).\nControlla la connessione e riprova.`)
-    } finally {
-      setDeletingTagliandoId(null)
-    }
+    scrivi('deleteTagliando', { id })
   }
 
-  async function handleUpdateTagliando() {
-    await refreshTagliandi()
+  function handleUpdateTagliando() {
     setEditingTagliandoId(null)
   }
 
-  async function handleSaveReminder(vId) {
-    await refreshTagliandi()
+  function handleSaveReminder() {
     setAddingReminderId(null)
   }
 

@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { CATEGORIE, TIPI_VEICOLO, TIPI_INTERVENTO } from '../config'
 import { format } from 'date-fns'
-import * as api from '../services/api'
-import { CheckCircle, Loader2 } from 'lucide-react'
+import { CheckCircle } from 'lucide-react'
 
 // Tutte le categorie tranne "altro" supportano il reminder
 const CATEGORIE_CON_REMINDER = ['manutenzione', 'assicurazione', 'bollo', 'revisione', 'pneumatici']
@@ -22,9 +21,8 @@ const CATEGORIA_TIPO_MAP = {
 }
 
 export default function AddCosto() {
-  const { veicoli, refreshCosti, refreshTagliandi } = useApp()
+  const { veicoli, scrivi } = useApp()
   const [success, setSuccess] = useState(false)
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
   const [veicoloId, setVeicoloId] = useState('')
@@ -51,8 +49,12 @@ export default function AddCosto() {
     setKmProssimi('')
   }
 
-  async function handleSave(e) {
+  // ⚠️ 25/09/2026 (v0.8.0): niente più attesa. Prima il bottone restava su «Salvataggio...» finché Google
+  // non rispondeva a quattro chiamate in fila (fino a un minuto). Ora la spesa entra nella coda di invio,
+  // si vede subito nelle altre pagine e parte per il Mac in sottofondo (services/coda.js).
+  function handleSave(e) {
     e.preventDefault()
+    if (success) return   // doppio tocco: la spesa è appena partita, non se ne crea una seconda
     const soloReminder = hasReminder && !importo && (dataProssima || kmProssimi)
     if (!veicoloId) {
       setError('Seleziona un veicolo')
@@ -62,40 +64,31 @@ export default function AddCosto() {
       setError('Compila tutti i campi obbligatori')
       return
     }
-    setSaving(true)
     setError(null)
-    try {
-      if (!soloReminder) {
-        await api.addCosto({ veicoloId, data, categoria, importo, nota, km, litri })
-      }
-      if (hasReminder && (dataProssima || kmProssimi)) {
-        await api.addTagliando({
-          veicoloId,
-          tipo: tipoIntervento || CATEGORIA_TIPO_MAP[categoria] || 'Altro',
-          data: soloReminder ? '' : data,
-          km: soloReminder ? '' : km,
-          dataProssima,
-          kmProssimi,
-          nota,
-          importo: soloReminder ? '' : importo,
-        })
-        await refreshTagliandi()
-      }
-      if (!soloReminder) await refreshCosti()
-      setSuccess(true)
-      setImporto('')
-      setNota('')
-      setKm('')
-      setLitri('')
-      setHasReminder(false)
-      setDataProssima('')
-      setKmProssimi('')
-      setTimeout(() => setSuccess(false), 2000)
-    } catch (e) {
-      setError('Errore nel salvataggio')
-    } finally {
-      setSaving(false)
+    if (!soloReminder) {
+      scrivi('addCosto', { veicoloId, data, categoria, importo, nota, km, litri })
     }
+    if (hasReminder && (dataProssima || kmProssimi)) {
+      scrivi('addTagliando', {
+        veicoloId,
+        tipo: tipoIntervento || CATEGORIA_TIPO_MAP[categoria] || 'Altro',
+        data: soloReminder ? '' : data,
+        km: soloReminder ? '' : km,
+        dataProssima,
+        kmProssimi,
+        nota,
+        importo: soloReminder ? '' : importo,
+      })
+    }
+    setSuccess(true)
+    setImporto('')
+    setNota('')
+    setKm('')
+    setLitri('')
+    setHasReminder(false)
+    setDataProssima('')
+    setKmProssimi('')
+    setTimeout(() => setSuccess(false), 2000)
   }
 
   return (
@@ -296,11 +289,11 @@ export default function AddCosto() {
 
         <button
           type="submit"
-          disabled={saving}
+          disabled={success}
           className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2"
         >
-          {saving ? <Loader2 size={18} className="animate-spin" /> : null}
-          {saving ? 'Salvataggio...' : 'Salva'}
+          {success ? <CheckCircle size={18} /> : null}
+          {success ? 'Salvato' : 'Salva'}
         </button>
       </form>
     </div>

@@ -1,29 +1,42 @@
-import { APPS_SCRIPT_URL as CONFIG_URL } from '../config'
+import { APPS_SCRIPT_URL, MOTORE_URL } from '../config'
 
-function getUrl() {
-  return localStorage.getItem('appsScriptUrl') || CONFIG_URL
-}
+// ⭐ 25/09/2026 (v0.8.0) — i dati stanno sul Mac (server/motore.py), non più su Google.
+// `motoreUrl` in localStorage serve solo per le prove su un motore di collaudo.
+const urlMotore = () => localStorage.getItem('motoreUrl') || MOTORE_URL
+// Su Google restano soltanto le notifiche Telegram: configurazione, prova e promemoria del 1° del mese.
+const urlGoogle = () => localStorage.getItem('appsScriptUrl') || APPS_SCRIPT_URL
 
 /**
  * ⚠️ 22/09/2026 — PERCHÉ QUESTO FILE NON È PIÙ UNA `fetch` NUDA.
  * Luca: «ho provato a scrivere una spesa sul Discovery, è rimasta su salvataggio per tre minuti;
- * ho chiuso e riaperto ma non c'è». La spesa **c'era** (586 €, motorino avviamento, scritta alle
- * 06:50): a fare i capricci era Apps Script, che quella mattina rispondeva la pagina Drive
- * «Impossibile aprire il file in questo momento» **una volta su due**, impiegandoci oltre 20
- * secondi. Senza timeout l'app restava appesa; e siccome la risposta del POST si perdeva, una
- * scrittura riuscita sembrava fallita.
+ * ho chiuso e riaperto ma non c'è». La spesa **c'era**: Apps Script rispondeva la pagina Drive
+ * «Impossibile aprire il file in questo momento» una volta su due, dopo oltre 20 secondi.
+ * Da allora: **timeout** su ogni chiamata e **letture ritentate** (il guasto era intermittente).
  *
- * Tre regole, in ordine di importanza:
- *  1. **Timeout**: nessuna chiamata resta appesa. Meglio un errore in 15 secondi che una rotella.
- *  2. **Le letture si ritentano**: il guasto è intermittente, due tentativi in più lo coprono.
- *  3. **Le scritture NON si ritentano — si RILEGGONO.** Ritentare un POST andato a buon fine crea
- *     il doppione: è così che il 26/08 sono nate due schede veicolo identiche. Se la risposta si
- *     perde si rilegge la collezione e si cerca la riga: se c'è, la scrittura è riuscita.
+ * ⚠️ 25/09/2026 — le SCRITTURE non passano più da qui in diretta: le manda la coda di invio
+ * (`coda.js`), che l'app non aspetta e che le RIMANDA finché il motore non risponde. Rimandare è
+ * sicuro perché l'id di una riga nuova lo sceglie l'app (`nuovoId`) e il motore non scrive due volte
+ * lo stesso id. La vecchia regola «le scritture non si ritentano, si rileggono» serviva col motore di
+ * Google, che assegnava l'id da sé.
  */
 const TIMEOUT = 15000
+const TIMEOUT_INVIO = 20000
 const TENTATIVI_LETTURA = 3
+const NON_RISPONDE = 'Il Mac non risponde: controlla che Tailscale sia acceso'
 
-// Apps Script, quando non ce la fa, risponde 200 con una pagina HTML: `res.json()` muore con un
+// Stesso formato degli id del motore: istante in base 36 più 4 caratteri a caso.
+export function nuovoId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6).padEnd(4, '0')
+}
+
+// Rete assente, Tailscale spento o motore fermo: fetch fallisce con un messaggio del browser
+// («Load failed», «Failed to fetch») o scade. Qui diventa una frase che dice cosa controllare.
+function leggibile(e) {
+  return e && (e.name === 'TypeError' || e.name === 'TimeoutError' || e.name === 'AbortError')
+    ? new Error(NON_RISPONDE) : e
+}
+
+// Google, quando non ce la fa, risponde 200 con una pagina HTML: `res.json()` morirebbe con un
 // SyntaxError che sembra un bug nostro. Qui diventa un errore leggibile.
 async function leggiJson(res) {
   const testo = await res.text()
@@ -37,9 +50,10 @@ async function leggiJson(res) {
 }
 
 /**
- * ⚠️ 24/09/2026 — PIN. L'indirizzo del motore Google sta nel repo PUBBLICO dell'app: senza un segreto
+ * ⚠️ 24/09/2026 — PIN. L'indirizzo del motore sta nel repo PUBBLICO dell'app: senza un segreto
  * chiunque poteva leggere e modificare veicoli, costi e perfino la configurazione Telegram. Il PIN NON
- * sta nel codice (che è pubblico): lo chiede l'app la prima volta e resta su questo telefono.
+ * sta nel codice (che è pubblico): lo chiede l'app la prima volta e resta su questo telefono. Il motore
+ * sul Mac usa lo stesso PIN, quindi col passaggio non va reinserito.
  * Se il motore risponde { pinRichiesto: true } (PIN assente o sbagliato) lo si richiede e si riprova
  * UNA volta: una richiesta respinta per il PIN non ha scritto niente, quindi riprovarla non crea doppioni.
  *
@@ -68,9 +82,9 @@ function leggiPin(respinto = null) {
 const pinRifiutato = dati => !!(dati && dati.pinRichiesto)
 const ERRORE_PIN = 'PIN non valido: chiudi e riapri l\'app per inserirlo di nuovo'
 
-async function call(params, tentativi = TENTATIVI_LETTURA, respinto = null) {
+async function call(params, { base = urlMotore(), tentativi = TENTATIVI_LETTURA, respinto = null } = {}) {
   const pin = leggiPin(respinto)
-  const url = new URL(getUrl())
+  const url = new URL(base)
   Object.entries({ ...params, pin }).forEach(([k, v]) => url.searchParams.set(k, v))
   let ultimo, dati, letto = false
   for (let i = 0; i < tentativi && !letto; i++) {
@@ -80,110 +94,52 @@ async function call(params, tentativi = TENTATIVI_LETTURA, respinto = null) {
       dati = await leggiJson(res)
       letto = true
     } catch (e) {
-      ultimo = e
+      ultimo = leggibile(e)
     }
   }
   if (!letto) throw ultimo
   if (pinRifiutato(dati)) {
     if (respinto !== null || !pin) throw new Error(ERRORE_PIN)
-    return call(params, tentativi, pin)
+    return call(params, { base, tentativi, respinto: pin })
   }
   return dati
 }
 
-// come riconoscere, rileggendo, una riga appena scritta: per ogni scrittura i campi che la
-// identificano senza ambiguità (l'id lo assegna il backend, quindi non possiamo usarlo)
-const CONFERMA = {
-  addCosto: {
-    leggi: () => call({ action: 'getCosti' }),
-    uguale: (r, b) => r.veicoloId === b.veicoloId && r.data === b.data
-      && r.categoria === b.categoria && String(r.importo) === String(b.importo),
-  },
-  addTagliando: {
-    leggi: () => call({ action: 'getTagliandi' }),
-    uguale: (r, b) => r.veicoloId === b.veicoloId && r.tipo === b.tipo
-      && r.dataProssima === b.dataProssima,
-  },
-  addVeicolo: {
-    leggi: () => call({ action: 'getVeicoli' }),
-    uguale: (r, b) => r.targa === b.targa && r.nome === b.nome,
-  },
-}
-
-async function post(body, respinto = null) {
+async function post(body, { base = urlMotore(), timeout = TIMEOUT, respinto = null } = {}) {
   const pin = leggiPin(respinto)
-  let dati
+  let res
   try {
-    const res = await fetch(getUrl(), {
+    res = await fetch(base, {
       method: 'POST',
       body: JSON.stringify({ ...body, pin }),
-      signal: AbortSignal.timeout(TIMEOUT),
+      signal: AbortSignal.timeout(timeout),
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    dati = await leggiJson(res)
-  } catch (errore) {
-    const conferma = CONFERMA[body.action]
-    if (!conferma) throw errore
-    // ⛔ non si ritenta: si guarda se la riga c'è già
-    const righe = await conferma.leggi().catch(() => null)
-    if (Array.isArray(righe) && righe.some(r => conferma.uguale(r, body))) {
-      return { ok: true, salvataGiaPrima: true }
-    }
-    throw errore
+  } catch (e) {
+    throw leggibile(e)
   }
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const dati = await leggiJson(res)
   if (pinRifiutato(dati)) {
     if (respinto !== null || !pin) throw new Error(ERRORE_PIN)
-    return post(body, pin)   // respinta per il PIN = niente scritto: riprovare non crea doppioni
+    return post(body, { base, timeout, respinto: pin })   // respinta per il PIN = niente scritto
   }
   return dati
 }
 
-// VEICOLI
-export async function getVeicoli() {
-  return call({ action: 'getVeicoli' })
-}
-export async function addVeicolo(data) {
-  return post({ action: 'addVeicolo', ...data })
-}
-export async function updateVeicolo(data) {
-  return post({ action: 'updateVeicolo', ...data })
-}
-export async function deleteVeicolo(id) {
-  return post({ action: 'deleteVeicolo', id })
+// Una scrittura della coda di invio (coda.js): add/update/delete di veicoli, costi e tagliandi.
+export function invia(action, body) {
+  return post({ action, ...body }, { timeout: TIMEOUT_INVIO })
 }
 
-// COSTI
-export async function getCosti() {
-  return call({ action: 'getCosti' })
-}
-export async function addCosto(data) {
-  return post({ action: 'addCosto', ...data })
-}
-export async function updateCosto(data) {
-  return post({ action: 'updateCosto', ...data })
-}
-export async function deleteCosto(id) {
-  return post({ action: 'deleteCosto', id })
-}
+// LETTURE
+export const getVeicoli = () => call({ action: 'getVeicoli' })
+export const getCosti = () => call({ action: 'getCosti' })
+export const getTagliandi = () => call({ action: 'getTagliandi' })
 
-// TAGLIANDI
-export async function getTagliandi() {
-  return call({ action: 'getTagliandi' })
+// TELEGRAM (su Google)
+export function saveTelegramConfig({ botToken, chatId }) {
+  return post({ action: 'saveTelegramConfig', botToken, chatId }, { base: urlGoogle(), timeout: 30000 })
 }
-export async function addTagliando(data) {
-  return post({ action: 'addTagliando', ...data })
-}
-export async function updateTagliando(data) {
-  return post({ action: 'updateTagliando', ...data })
-}
-export async function deleteTagliando(id) {
-  return post({ action: 'deleteTagliando', id })
-}
-
-// TELEGRAM
-export async function saveTelegramConfig({ botToken, chatId }) {
-  return post({ action: 'saveTelegramConfig', botToken, chatId })
-}
-export async function testTelegram() {
-  return call({ action: 'testTelegram' })
+export function testTelegram() {
+  return call({ action: 'testTelegram' }, { base: urlGoogle() })
 }

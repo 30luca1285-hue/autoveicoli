@@ -2,3 +2,10 @@ node_modules/
 dist/
 .DS_Store
 *.local
+
+# motore sul Mac (25/09/2026): i DATI non vanno mai nel repo, che è pubblico
+server/*.db
+server/*.db-*
+server/.backup-in-corso.db
+server/__pycache__/
+server/archivio/

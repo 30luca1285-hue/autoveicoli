@@ -1,6 +1,11 @@
-// URL del motore Google (deployment @31). Dal 24/09/2026 sta qui e non più solo nelle Impostazioni del
-// telefono: il motore risponde soltanto col PIN, quindi l'indirizzo da solo non apre niente, e così una
-// reinstallazione dell'app funziona chiedendo solo il PIN. (Le Impostazioni possono ancora sovrascriverlo.)
+// ⭐ Dal 25/09/2026 i dati stanno sul Mac dell'azienda (server/motore.py). Dal telefono ci si arriva solo
+// attraverso Tailscale: https con certificato vero sulla porta 8443 (`tailscale serve`), gli altri
+// servizi del Mac restano dove sono. Google era lento (scritture fino a 35 s) e ogni tanto rispondeva con
+// la pagina d'errore di Drive. Il motore risponde soltanto col PIN, quindi l'indirizzo da solo non apre niente.
+export const MOTORE_URL = 'https://mac-mini-di-luca.tailf1ca0e.ts.net:8443/'
+
+// URL del motore Google (deployment @31): ora serve solo per le notifiche Telegram (configurazione, prova e
+// promemoria del 1° del mese), che leggono la copia dei dati che il Mac tiene aggiornata sul foglio.
 export const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzH6xpACTJSY2p72HYtVSE-ttd5dcR9J4x-pd8zTxOg66BVjCjKjct-YIfdJnpo92Gy7g/exec'
 
 export const CATEGORIE = [

@@ -405,6 +405,56 @@ function doGet(e) {
   }
 }
 
+// ── I dati stanno sul Mac (25/09/2026, v0.8.0) ─────────────────────────────
+// Luca: «il salvataggio continua ad essere lunghissimo», poi «nel 2026 ci dobbiamo appoggiare ancora a
+// Google?». Misurato quel giorno: scritture qui da 1,5 a 35 s, una su tre con la pagina Drive «Impossibile
+// aprire il file». Da allora i dati stanno sul Mac (Autoveicoli/server/motore.py) e questi fogli sono la
+// sua COPIA: il Mac la manda con `rispecchia` quando qualcosa cambia. Servono a Luca per consultare e al
+// promemoria del 1° del mese (checkScadenzeMensili), che continua a leggere da qui.
+// ⛔ Le scritture dirette sono chiuse: la copia successiva le cancellerebbe senza dire niente a nessuno.
+// Rispondono con TESTO e non JSON, così l'app vecchia (v0.7.5) mostra «Errore nel salvataggio» invece di
+// credere salvato. Le funzioni add/update/delete qui sopra restano solo per un eventuale ritorno indietro.
+
+const SCRITTURE_CHIUSE = ['addVeicolo', 'updateVeicolo', 'deleteVeicolo', 'addCosto', 'updateCosto',
+  'deleteCosto', 'addTagliando', 'updateTagliando', 'deleteTagliando']
+
+// colonne da scrivere come NUMERI: una stringa «7.5» in un foglio italiano può diventare una data
+const NUMERICHE = {
+  Costi: ['importo', 'litri', 'km'],
+  Tagliandi: ['km', 'kmProssimi', 'importo'],
+}
+
+function rispecchia_(p) {
+  const lock = LockService.getScriptLock()
+  lock.waitLock(30000)
+  try {
+    const fogli = [[SHEET_VEICOLI, HDR_VEICOLI, p.veicoli], [SHEET_COSTI, HDR_COSTI, p.costi],
+                   [SHEET_TAGLIANDI, HDR_TAGLIANDI, p.tagliandi]]
+    fogli.forEach(([nome, hdr, righe]) => {
+      if (!Array.isArray(righe)) throw new Error('copia incompleta: manca ' + nome)
+    })
+    const conta = {}
+    fogli.forEach(([nome, hdr, righe]) => {
+      const sheet = getOrCreateSheet(nome, hdr)
+      const numeriche = NUMERICHE[nome] || []
+      const ultima = sheet.getLastRow()
+      if (ultima > 1) sheet.getRange(2, 1, ultima - 1, Math.max(hdr.length, sheet.getLastColumn())).clearContent()
+      if (righe.length) {
+        sheet.getRange(2, 1, righe.length, hdr.length).setValues(righe.map(r => hdr.map(h => {
+          const v = r[h] === undefined || r[h] === null ? '' : String(r[h])
+          if (numeriche.indexOf(h) >= 0) { const n = parseFloat(v); return isNaN(n) ? '' : n }
+          return v.charAt(0) === '=' ? "'" + v : v      // una nota non deve diventare una formula
+        })))
+      }
+      conta[nome] = righe.length
+    })
+    SpreadsheetApp.flush()
+    return { ok: true, righe: conta }
+  } finally {
+    lock.releaseLock()
+  }
+}
+
 // ── Router POST ────────────────────────────────────────────────────────────
 
 function doPost(e) {
@@ -412,17 +462,13 @@ function doPost(e) {
     const body = JSON.parse(e.postData.contents)
     if (!pinValido_(body.pin)) return corsResponse(PIN_RIFIUTATO)
     const action = body.action
+    if (SCRITTURE_CHIUSE.indexOf(action) >= 0) {
+      return ContentService.createTextOutput('Autoveicoli ora salva sul Mac: chiudi e riapri l\'app per aggiornarla.')
+        .setMimeType(ContentService.MimeType.TEXT)
+    }
     let result
     switch (action) {
-      case 'addVeicolo':      result = addVeicolo(body); break
-      case 'updateVeicolo':   result = updateVeicolo(body); break
-      case 'deleteVeicolo':   result = deleteVeicolo(body.id); break
-      case 'addCosto':        result = addCosto(body); break
-      case 'updateCosto':     result = updateCosto(body); break
-      case 'deleteCosto':     result = deleteCosto(body.id); break
-      case 'addTagliando':        result = addTagliando(body); break
-      case 'updateTagliando':     result = updateTagliando(body); break
-      case 'deleteTagliando':     result = deleteTagliando(body.id); break
+      case 'rispecchia':          result = rispecchia_(body); break
       case 'saveTelegramConfig':  result = saveTelegramConfig(body); break
       default:                    result = { error: 'Unknown action: ' + action }
     }
